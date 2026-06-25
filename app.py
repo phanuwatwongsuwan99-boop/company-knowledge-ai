@@ -190,17 +190,45 @@ st.markdown(
         [data-testid="stChatMessageAvatarAssistant"] {{
             background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange)) !important;
         }}
+        /* Chat input — single unified pill, Gemini-style (no nested box-in-box) */
         [data-testid="stChatInput"] {{
             background: transparent;
+            border: none;
+            box-shadow: none;
+        }}
+        /* Primary target: Streamlit's chat input inner container */
+        [data-testid="stChatInputContainer"],
+        [data-testid="stChatInput"] > div {{
+            background: var(--surface-2) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 28px !important;
+            padding: 6px 8px 6px 20px !important;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+        }}
+        [data-testid="stChatInputContainer"]:focus-within,
+        [data-testid="stChatInput"] > div:focus-within {{
+            border-color: var(--accent-green) !important;
+            box-shadow: 0 0 0 1px var(--accent-green);
         }}
         [data-testid="stChatInput"] textarea {{
-            background: var(--surface-2) !important;
+            background: transparent !important;
             color: var(--text) !important;
-            border: 1px solid var(--border) !important;
-            border-radius: var(--radius-lg) !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 10px 0 !important;
         }}
         [data-testid="stChatInput"] textarea::placeholder {{
             color: var(--text-faint) !important;
+        }}
+        [data-testid="stChatInputSubmitButton"],
+        [data-testid="stChatInput"] button {{
+            background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange)) !important;
+            border-radius: 50% !important;
+            border: none !important;
+        }}
+        [data-testid="stChatInputSubmitButton"] svg,
+        [data-testid="stChatInput"] button svg {{
+            fill: #1A1300 !important;
         }}
 
         /* ---------- METRICS / DATAFRAME (admin) ---------- */
@@ -575,8 +603,8 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-    st.caption(f"Username{st.session_state['current_user']}")
-    st.button("New chat", on_click=new_chat, use_container_width=True, type="primary")
+    st.caption(f"👤 {st.session_state['current_user']}")
+    st.button("➕ New chat", on_click=new_chat, use_container_width=True, type="primary")
     st.write("---")
 
     st.write("**History**")
@@ -588,13 +616,13 @@ with st.sidebar:
             short_name = first_question[:25] + "..." if len(first_question) > 25 else first_question
 
             is_active = (chat_id == st.session_state.get("current_chat_id"))
-            btn_label = f"{short_name}" if not is_active else f"📍 {short_name}"
+            btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
 
             st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
     else:
         st.caption("ยังไม่มีประวัติการแชท")
 
-    st.button("Logout", on_click=logout, use_container_width=True)
+    st.button("🚪 Logout", on_click=logout, use_container_width=True)
 
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
