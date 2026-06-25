@@ -364,6 +364,15 @@ def check_password():
         )
 
     if "password_correct" not in st.session_state:
+        st.markdown(
+            """
+            <style>
+                [data-testid='stSidebar']{display:none;}
+                [data-testid='stAppViewContainer'] > .main {margin-left:0;}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         col1, col2, col3 = st.columns([1, 1.3, 1])
         with col2:
             render_login_header()
@@ -374,6 +383,15 @@ def check_password():
         return False
 
     elif not st.session_state["password_correct"]:
+        st.markdown(
+            """
+            <style>
+                [data-testid='stSidebar']{display:none;}
+                [data-testid='stAppViewContainer'] > .main {margin-left:0;}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         col1, col2, col3 = st.columns([1, 1.3, 1])
         with col2:
             render_login_header()
@@ -548,8 +566,8 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-    st.caption(f"👤Username:{st.session_state['current_user']}")
-    st.button("New chat", on_click=new_chat, use_container_width=True, type="primary")
+    st.caption(f"👤 {st.session_state['current_user']}")
+    st.button("➕ New chat", on_click=new_chat, use_container_width=True, type="primary")
     st.write("---")
 
     st.write("**History**")
@@ -561,13 +579,13 @@ with st.sidebar:
             short_name = first_question[:25] + "..." if len(first_question) > 25 else first_question
 
             is_active = (chat_id == st.session_state.get("current_chat_id"))
-            btn_label = f"💬 {short_name}" if not is_active else f"{short_name}"
+            btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
 
             st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
     else:
         st.caption("ยังไม่มีประวัติการแชท")
 
-    st.button("Logout", on_click=logout, use_container_width=True)
+    st.button("🚪 Logout", on_click=logout, use_container_width=True)
 
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
