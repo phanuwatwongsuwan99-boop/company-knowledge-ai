@@ -97,18 +97,18 @@ ADMIN_USERS = ["boss", "admin"]
 if st.session_state["current_user"] in ADMIN_USERS:
     
     with st.sidebar:
-        st.success(f"👑 สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
+        st.success(f"ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
         st.write("---")
-        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
+        st.button("ออกจากระบบ", on_click=logout, use_container_width=True)
         st.write("---")
 
-    st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
+    st.title("ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
     st.write("---")
 
     if os.path.exists("chat_logs.csv"):
         with open("chat_logs.csv", "rb") as f:
             st.download_button(
-                label="📥 ดาวน์โหลดประวัติการแชททั้งหมด (CSV)",
+                label="ดาวน์โหลดประวัติการแชททั้งหมด (CSV)",
                 data=f,
                 file_name=f"chat_logs_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv"
