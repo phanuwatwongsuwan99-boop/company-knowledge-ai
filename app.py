@@ -190,32 +190,31 @@ st.markdown(
         [data-testid="stChatMessageAvatarAssistant"] {{
             background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange)) !important;
         }}
-        /* Chat input — single unified pill, Gemini-style (no nested box-in-box) */
+        /* Chat input — unify every nested layer to the same background so seams disappear */
         [data-testid="stChatInput"] {{
-            background: transparent;
-            border: none;
-            box-shadow: none;
-        }}
-        /* Primary target: Streamlit's chat input inner container */
-        [data-testid="stChatInputContainer"],
-        [data-testid="stChatInput"] > div {{
             background: var(--surface-2) !important;
             border: 1px solid var(--border) !important;
             border-radius: 28px !important;
-            padding: 6px 8px 6px 20px !important;
             box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+            overflow: hidden;
         }}
-        [data-testid="stChatInputContainer"]:focus-within,
-        [data-testid="stChatInput"] > div:focus-within {{
+        [data-testid="stChatInput"]:focus-within {{
             border-color: var(--accent-green) !important;
             box-shadow: 0 0 0 1px var(--accent-green);
         }}
+        [data-testid="stChatInput"] > div,
+        [data-testid="stChatInputContainer"] {{
+            background: var(--surface-2) !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 4px 6px 4px 18px !important;
+        }}
         [data-testid="stChatInput"] textarea {{
-            background: transparent !important;
+            background: var(--surface-2) !important;
             color: var(--text) !important;
             border: none !important;
             box-shadow: none !important;
-            padding: 10px 0 !important;
+            padding: 12px 0 !important;
         }}
         [data-testid="stChatInput"] textarea::placeholder {{
             color: var(--text-faint) !important;
