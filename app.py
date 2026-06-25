@@ -418,6 +418,15 @@ if not check_password():
 
 # --- แอนิเมชันไดโนเสาร์ ---
 if st.session_state.get("show_dino", False):
+    st.markdown(
+        """
+        <style>
+            [data-testid='stSidebar']{display:none;}
+            [data-testid='stAppViewContainer'] > .main {margin-left:0;}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     col1, col2, col3 = st.columns([1, 1.3, 1])
     with col2:
         st.markdown(
