@@ -20,25 +20,37 @@ import csv
 import pandas as pd
 from collections import Counter
 from datetime import datetime, timezone, timedelta
+import uuid # 👈 นำเข้าเครื่องมือสร้างรหัสห้องแชทอัตโนมัติ
 
 st.set_page_config(page_title="Corporate AI System", page_icon="🤖", layout="wide")
 
 # --- ฟังก์ชันบันทึกประวัติการแชทลงไฟล์หลังบ้าน ---
-def log_chat(username, question, answer, status):
+def log_chat(chat_id, username, question, answer, status):
     tz_th = timezone(timedelta(hours=7))
     now = datetime.now(tz_th).strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile("chat_logs.csv")
     
+    # หากไฟล์มีอยู่แล้ว แต่เป็นเวอร์ชันเก่าที่ไม่มี Chat ID (ให้ระบบข้ามไปเขียนต่อได้เลย)
     with open("chat_logs.csv", "a", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["วัน-เวลา", "ชื่อพนักงาน", "คำถาม", "คำตอบจาก AI", "สถานะการตอบ"])
-        writer.writerow([now, username, question, answer, status])
+            # 📌 เพิ่มคอลัมน์ Chat ID เข้าไปในระบบฐานข้อมูล
+            writer.writerow(["Chat ID", "วัน-เวลา", "ชื่อพนักงาน", "คำถาม", "คำตอบจาก AI", "สถานะการตอบ"])
+        writer.writerow([chat_id, now, username, question, answer, status])
 
 # --- ฟังก์ชันออกจากระบบ (Logout) ---
 def logout():
     st.session_state.clear()
     st.rerun()
+
+# --- ระบบสร้างและสลับห้องแชท ---
+def new_chat():
+    st.session_state["current_chat_id"] = str(uuid.uuid4().hex[:8]) # สร้างรหัสห้องใหม่ 8 หลัก
+    st.session_state.messages = []
+
+def switch_chat(selected_chat_id):
+    st.session_state["current_chat_id"] = selected_chat_id
+    st.session_state.messages = [] # เคลียร์หน้าจอเพื่อรอโหลดประวัติห้องที่เลือก
 
 # --- ระบบ Login แบบจัดกึ่งกลาง ---
 def check_password():
@@ -56,26 +68,25 @@ def check_password():
         st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        # แบ่ง 3 คอลัมน์ (เว้นซ้าย 1 ส่วน, ตรงกลาง 1.5 ส่วน, เว้นขวา 1 ส่วน)
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
             st.markdown("<h2 style='text-align: center;'>Oran AI</h2>", unsafe_allow_html=True)
-            st.write("") # เว้นบรรทัด
+            st.write("") 
             st.text_input("Username", key="username_input")
             st.text_input("Password", type="password", key="password_input")
-            st.write("") # เว้นบรรทัด
+            st.write("") 
             st.button("Login", on_click=login_attempt, use_container_width=True)
         return False
         
     elif not st.session_state["password_correct"]:
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
-            st.markdown("<h2 style='text-align: center;'>🔒 เข้าสู่ระบบ AI องค์กร</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center;'>Oran AI</h2>", unsafe_allow_html=True)
             st.error("ชื่อผู้ใช้งาน หรือ รหัสผ่าน ไม่ถูกต้อง! กรุณาลองใหม่")
-            st.text_input("ชื่อผู้ใช้งาน (Username)", key="username_input")
-            st.text_input("รหัสผ่าน (Password)", type="password", key="password_input")
-            st.write("") # เว้นบรรทัด
-            st.button("เข้าสู่ระบบ", on_click=login_attempt, use_container_width=True)
+            st.text_input("Username", key="username_input")
+            st.text_input("Password", type="password", key="password_input")
+            st.write("") 
+            st.button("Login", on_click=login_attempt, use_container_width=True)
         return False
     return True
 
@@ -95,6 +106,11 @@ if st.session_state.get("show_dino", False):
     dino_text.empty()
     progress_bar.empty()
     st.session_state["show_dino"] = False
+    
+    # 📌 เมื่อล็อคอินเสร็จ สร้างรหัสห้องแชทแรกเตรียมไว้ให้เลย
+    if "current_chat_id" not in st.session_state:
+        st.session_state["current_chat_id"] = str(uuid.uuid4().hex[:8])
+        
     st.rerun()
 
 ADMIN_USERS = ["boss", "admin"] 
@@ -113,76 +129,83 @@ if st.session_state["current_user"] in ADMIN_USERS:
     st.write("---")
 
     if os.path.exists("chat_logs.csv"):
-        df = pd.read_csv("chat_logs.csv")
-        
+        # ใช้ error_bad_lines=False เพื่อป้องกันบั๊กหากไฟล์เก่าผสมกับไฟล์ใหม่
         try:
-            first_log_time_str = df.iloc[0]["วัน-เวลา"]
-            first_log_time = datetime.strptime(first_log_time_str, "%Y-%m-%d %H:%M:%S")
-            tz_th = timezone(timedelta(hours=7))
-            current_time = datetime.now(tz_th).replace(tzinfo=None)
-            file_age_days = (current_time - first_log_time).days
-            
-            if file_age_days >= 5:
-                st.warning(
-                    f"⚠️ **แจ้งเตือนผู้ดูแลระบบ:** ไฟล์ประวัติการแชทนี้ถูกบันทึกสะสมมาเป็นเวลา **{file_age_days} วัน** แล้ว "
-                    f"(เริ่มบันทึกเมื่อ: {first_log_time_str}) ระบบฟรีของ Streamlit Cloud อาจเคลียร์ข้อมูลทิ้งในอีกไม่ช้า "
-                    f"**กรุณากดดาวน์โหลดไฟล์สำรองข้อมูลไว้ที่คอมพิวเตอร์ของคุณทันทีครับ!**"
-                )
-                st.write("")
+            df = pd.read_csv("chat_logs.csv", on_bad_lines='skip')
         except:
-            pass
+            df = pd.DataFrame()
+            
+        if not df.empty:
+            try:
+                first_log_time_str = df.iloc[0]["วัน-เวลา"]
+                first_log_time = datetime.strptime(first_log_time_str, "%Y-%m-%d %H:%M:%S")
+                tz_th = timezone(timedelta(hours=7))
+                current_time = datetime.now(tz_th).replace(tzinfo=None)
+                file_age_days = (current_time - first_log_time).days
+                
+                if file_age_days >= 5:
+                    st.warning(
+                        f"⚠️ **แจ้งเตือนผู้ดูแลระบบ:** ไฟล์ประวัติถูกบันทึกมา **{file_age_days} วัน** แล้ว "
+                        f"ระบบฟรีอาจเคลียร์ข้อมูลทิ้ง **กรุณาดาวน์โหลดสำรองข้อมูลทันที!**"
+                    )
+                    st.write("")
+            except:
+                pass
 
-        with open("chat_logs.csv", "rb") as f:
-            st.download_button(
-                label="📥 ดาวน์โหลดประวัติการแชททั้งหมด (CSV)",
-                data=f,
-                file_name=f"chat_logs_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
-        
-        total_questions = len(df)
-        unanswered_questions = len(df[df["สถานะการตอบ"] == "ตอบไม่ได้"])
-        answered_questions = total_questions - unanswered_questions
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("จำนวนการสอบถามทั้งหมด", f"{total_questions} ครั้ง")
-        col2.metric("AI ตอบได้สำเร็จ", f"{answered_questions} ครั้ง")
-        col3.metric("AI ไม่มีข้อมูลคำตอบ", f"{unanswered_questions} ครั้ง", delta_color="inverse")
-        
-        st.write("---")
-        
-        def get_top_keywords(text_series, top_n=5):
-            words = []
-            stop_words = ["คะ", "ครับ", "อะไร", "ไหม", "มี", "ที่", "ได้", "การ", "ใน", "ของ", "อยาก", "สอบถาม", "ขอ"]
-            for text in text_series.dropna():
-                for word in str(text).split():
-                    if len(word) > 2 and word not in stop_words:
-                        words.append(word)
-            return Counter(words).most_common(top_n)
+            with open("chat_logs.csv", "rb") as f:
+                st.download_button(
+                    label="📥 ดาวน์โหลดประวัติการแชททั้งหมด (CSV)",
+                    data=f,
+                    file_name=f"chat_logs_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
+            
+            # ตรวจสอบว่ามีคอลัมน์สถานะการตอบไหม (เผื่อไฟล์เก่า)
+            if "สถานะการตอบ" in df.columns:
+                total_questions = len(df)
+                unanswered_questions = len(df[df["สถานะการตอบ"] == "ตอบไม่ได้"])
+                answered_questions = total_questions - unanswered_questions
+                
+                col1, col2, col3 = st.columns(3)
+                col1.metric("จำนวนการสอบถามทั้งหมด", f"{total_questions} ครั้ง")
+                col2.metric("AI ตอบได้สำเร็จ", f"{answered_questions} ครั้ง")
+                col3.metric("AI ไม่มีข้อมูลคำตอบ", f"{unanswered_questions} ครั้ง", delta_color="inverse")
+                st.write("---")
+            
+            def get_top_keywords(text_series, top_n=5):
+                words = []
+                stop_words = ["คะ", "ครับ", "อะไร", "ไหม", "มี", "ที่", "ได้", "การ", "ใน", "ของ", "อยาก", "สอบถาม", "ขอ"]
+                for text in text_series.dropna():
+                    for word in str(text).split():
+                        if len(word) > 2 and word not in stop_words:
+                            words.append(word)
+                return Counter(words).most_common(top_n)
 
-        st.subheader("🔥 5 อันดับหัวข้อ/คำถาม ที่พนักงานถามบ่อยที่สุด")
-        top_keywords = get_top_keywords(df["คำถาม"])
-        if top_keywords:
-            for rank, (word, count) in enumerate(top_keywords, 1):
-                st.write(f"**อันดับ {rank}:** หัวข้อเกี่ยวกับ **'{word}'** (ถาม {count} ครั้ง)")
-        else:
-            st.info("ระบบยังเก็บสถิติตัวแปรคำถามไม่เพียงพอ")
+            if "คำถาม" in df.columns:
+                st.subheader("🔥 5 อันดับหัวข้อ/คำถาม ที่พนักงานถามบ่อยที่สุด")
+                top_keywords = get_top_keywords(df["คำถาม"])
+                if top_keywords:
+                    for rank, (word, count) in enumerate(top_keywords, 1):
+                        st.write(f"**อันดับ {rank}:** หัวข้อเกี่ยวกับ **'{word}'** (ถาม {count} ครั้ง)")
+                else:
+                    st.info("ระบบยังเก็บสถิติตัวแปรคำถามไม่เพียงพอ")
+                st.write("---")
 
-        st.write("---")
-        st.subheader("⚠️ 5 อันดับหัวข้อที่พนักงานสงสัย แต่ 'ยังไม่มีคำตอบ'")
-        unanswered_df = df[df["สถานะการตอบ"] == "ตอบไม่ได้"]
-        top_unanswered_keywords = get_top_keywords(unanswered_df["คำถาม"])
-        
-        if top_unanswered_keywords:
-            st.error("คำเตือน: หัวข้อเหล่านี้ถูกถามบ่อยแต่ AI ตอบไม่ได้ กรุณาอัปเดตไฟล์ข้อมูลเพิ่มเติม")
-            for rank, (word, count) in enumerate(top_unanswered_keywords, 1):
-                st.write(f"❌ **อันดับ {rank}:** เรื่อง **'{word}'** (พยายามถามแต่ไม่มีคำตอบ {count} ครั้ง)")
-        else:
-            st.success("ยอดเยี่ยมมาก! ปัจจุบันยังไม่มีคำถามที่เอกสารตอบไม่ได้ถูกถามซ้ำ")
+            if "สถานะการตอบ" in df.columns and "คำถาม" in df.columns:
+                st.subheader("⚠️ 5 อันดับหัวข้อที่พนักงานสงสัย แต่ 'ยังไม่มีคำตอบ'")
+                unanswered_df = df[df["สถานะการตอบ"] == "ตอบไม่ได้"]
+                top_unanswered_keywords = get_top_keywords(unanswered_df["คำถาม"])
+                
+                if top_unanswered_keywords:
+                    st.error("คำเตือน: หัวข้อเหล่านี้ถูกถามบ่อยแต่ AI ตอบไม่ได้ กรุณาอัปเดตไฟล์ข้อมูลเพิ่มเติม")
+                    for rank, (word, count) in enumerate(top_unanswered_keywords, 1):
+                        st.write(f"❌ **อันดับ {rank}:** เรื่อง **'{word}'** (พยายามถามแต่ไม่มีคำตอบ {count} ครั้ง)")
+                else:
+                    st.success("ยอดเยี่ยมมาก! ปัจจุบันยังไม่มีคำถามที่เอกสารตอบไม่ได้ถูกถามซ้ำ")
+                st.write("---")
 
-        st.write("---")
-        st.subheader("📋 ตารางประวัติการใช้งานล่าสุด 20 รายการ")
-        st.dataframe(df.tail(20), use_container_width=True)
+            st.subheader("📋 ตารางประวัติการใช้งานล่าสุด 20 รายการ")
+            st.dataframe(df.tail(20), use_container_width=True)
     else:
         st.info("ขณะนี้ยังไม่มีพนักงานเข้ามาใช้งานระบบ จึงยังไม่มีข้อมูลสถิติรายงานสำหรับคุณ")
     st.stop() 
@@ -192,10 +215,50 @@ if st.session_state["current_user"] in ADMIN_USERS:
 # =========================================================
 st.set_option('client.showSidebarNavigation', False)
 
+# 📌 ---------------------------------------------------------
+# ระบบแถบเมนูด้านซ้ายสำหรับพนักงาน (แสดงห้องแชทย้อนหลัง)
+# ---------------------------------------------------------
+my_history_df = pd.DataFrame()
+if os.path.exists("chat_logs.csv"):
+    try:
+        # อ่านไฟล์และกรองเฉพาะประวัติของคนนี้
+        df_history = pd.read_csv("chat_logs.csv", on_bad_lines='skip')
+        if "ชื่อพนักงาน" in df_history.columns and "Chat ID" in df_history.columns:
+            my_history_df = df_history[df_history["ชื่อพนักงาน"] == st.session_state["current_user"]]
+    except:
+        pass
+
+with st.sidebar:
+    st.success(f"👤 บัญชี: **{st.session_state['current_user']}**")
+    
+    # ปุ่มเปิดห้องแชทใหม่
+    st.button("➕ แชทใหม่", on_click=new_chat, use_container_width=True, type="primary")
+    st.write("---")
+    
+    st.write("📝 **ประวัติการแชทของคุณ**")
+    if not my_history_df.empty:
+        # จัดกลุ่มตาม Chat ID เพื่อเอาคำถามแรกมาเป็นชื่อปุ่ม
+        chat_groups = my_history_df.groupby("Chat ID", sort=False)
+        
+        # วนลูปสร้างปุ่มประวัติแชท (เอาห้องล่าสุดขึ้นก่อน)
+        for chat_id, group in reversed(list(chat_groups)):
+            first_question = str(group.iloc[0]["คำถาม"])
+            # ตัดให้ชื่อห้องไม่ยาวเกินไป
+            short_name = first_question[:25] + "..." if len(first_question) > 25 else first_question
+            
+            # ทำสัญลักษณ์ให้รู้ว่าตอนนี้อยู่ห้องไหน
+            is_active = (chat_id == st.session_state.get("current_chat_id"))
+            btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
+            
+            # พอกดปุ่ม ให้เรียกใช้ฟังก์ชันสลับห้อง
+            st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
+    else:
+        st.caption("ยังไม่มีประวัติการแชท")
+# ---------------------------------------------------------
+
 header_col1, header_col2 = st.columns([8, 2])
 with header_col1:
-    st.title("Oram ผู้ช่วย AI สำหรับองค์กร")
-    st.caption(f"บัญชีผู้ใช้งาน: {st.session_state['current_user']}")
+    st.title("Oran ผู้ช่วย AI สำหรับองค์กร")
 with header_col2:
     st.write("") 
     st.button("Logout", on_click=logout, use_container_width=True)
@@ -205,7 +268,6 @@ st.write("---")
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
     docs = []
-    
     def load_document(file_path):
         ext = os.path.splitext(file_path)[1].lower()
         try:
@@ -275,25 +337,28 @@ rag_chain = (
     | StrOutputParser()
 )
 
-if "messages" not in st.session_state:
+# 📌 โหลดข้อความประวัติแชท เฉพาะของ "ห้องแชทปัจจุบัน (current_chat_id)"
+if "messages" not in st.session_state or not st.session_state.messages:
     st.session_state.messages = []
     
-    if os.path.exists("chat_logs.csv"):
-        try:
-            df_history = pd.read_csv("chat_logs.csv")
-            my_history = df_history[df_history["ชื่อพนักงาน"] == st.session_state["current_user"]]
-            
-            for index, row in my_history.iterrows():
-                st.session_state.messages.append({"role": "user", "content": str(row["คำถาม"])})
-                st.session_state.messages.append({"role": "assistant", "content": str(row["คำตอบจาก AI"])})
-        except:
-            pass 
+    if not my_history_df.empty and "current_chat_id" in st.session_state:
+        # กรองเอาแค่ประวัติที่ Chat ID ตรงกับห้องปัจจุบัน
+        current_chat_history = my_history_df[my_history_df["Chat ID"] == st.session_state["current_chat_id"]]
+        
+        for index, row in current_chat_history.iterrows():
+            st.session_state.messages.append({"role": "user", "content": str(row["คำถาม"])})
+            st.session_state.messages.append({"role": "assistant", "content": str(row["คำตอบจาก AI"])})
 
+# โชว์ข้อความแชทบนหน้าจอ
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร... (พิมพ์คำสั้นๆ ก็ได้นะ)"):
+    # ป้องกันกรณีเข้ามาครั้งแรกแล้วยังไม่มีรหัสห้อง
+    if "current_chat_id" not in st.session_state:
+        st.session_state["current_chat_id"] = str(uuid.uuid4().hex[:8])
+
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
@@ -308,4 +373,5 @@ if user_input := st.chat_input("พิมพ์คำถามเกี่ยว
             if NOT_FOUND_MSG in response:
                 status = "ตอบไม่ได้"
                 
-            log_chat(st.session_state["current_user"], user_input, response, status)
+            # ส่ง Chat ID ลงไปจดบันทึกด้วย
+            log_chat(st.session_state["current_chat_id"], st.session_state["current_user"], user_input, response, status)
