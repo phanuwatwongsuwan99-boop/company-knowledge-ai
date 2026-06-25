@@ -194,11 +194,11 @@ st.set_option('client.showSidebarNavigation', False)
 
 header_col1, header_col2 = st.columns([8, 2])
 with header_col1:
-    st.title("🤖 ผู้ช่วย AI สำหรับองค์กร")
-    st.caption(f"👤 บัญชีผู้ใช้พนักงาน: {st.session_state['current_user']}")
+    st.title("Oram ผู้ช่วย AI สำหรับองค์กร")
+    st.caption(f"บัญชีผู้ใช้งาน: {st.session_state['current_user']}")
 with header_col2:
     st.write("") 
-    st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
+    st.button("Logout", on_click=logout, use_container_width=True)
 
 st.write("---")
 
