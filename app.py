@@ -59,7 +59,7 @@ def check_password():
         # แบ่ง 3 คอลัมน์ (เว้นซ้าย 1 ส่วน, ตรงกลาง 1.5 ส่วน, เว้นขวา 1 ส่วน)
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
-            st.markdown("<h2 style='text-align: center;'>🔒 เข้าสู่ระบบ AI องค์กร</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center;'>Welcome to Oran</h2>", unsafe_allow_html=True)
             st.write("") # เว้นบรรทัด
             st.text_input("Username", key="username_input")
             st.text_input("Password", type="password", key="password_input")
@@ -104,12 +104,12 @@ ADMIN_USERS = ["boss", "admin"]
 # =========================================================
 if st.session_state["current_user"] in ADMIN_USERS:
     with st.sidebar:
-        st.success(f"👑 สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
+        st.success(f"ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
         st.write("---")
-        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
+        st.button("ออกจากระบบ", on_click=logout, use_container_width=True)
         st.write("---")
 
-    st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
+    st.title("ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
     st.write("---")
 
     if os.path.exists("chat_logs.csv"):
