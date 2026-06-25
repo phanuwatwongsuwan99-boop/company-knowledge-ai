@@ -61,8 +61,8 @@ def check_password():
         with col2:
             st.markdown("<h2 style='text-align: center;'>🔒 เข้าสู่ระบบ AI องค์กร</h2>", unsafe_allow_html=True)
             st.write("") # เว้นบรรทัด
-            st.text_input("ชื่อผู้ใช้งาน (Username)", key="username_input")
-            st.text_input("รหัสผ่าน (Password)", type="password", key="password_input")
+            st.text_input("Username", key="username_input")
+            st.text_input("Password", type="password", key="password_input")
             st.write("") # เว้นบรรทัด
             st.button("เข้าสู่ระบบ", on_click=login_attempt, use_container_width=True)
         return False
