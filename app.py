@@ -24,24 +24,22 @@ import uuid
 
 st.set_page_config(page_title="Corporate AI System", page_icon="🤖", layout="wide")
 
-# 📌 CSS จัดการหน้าตา (ล็อคปุ่ม Logout ให้อยู่ล่างสุดแบบตายตัว ไม่ขยับตาม Scroll)
+# 📌 CSS ล็อคปุ่ม Logout ให้อยู่ล่างสุดแบบตายตัว
 st.markdown(
     """
     <style>
-        /* บังคับ Sidebar ให้มีความยาวอย่างน้อยเต็มหน้าจอ */
         [data-testid="stSidebarContent"] > div:first-child {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
-        /* ล็อคปุ่มอันสุดท้าย (Logout) ให้อยู่ติดขอบล่างเสมอ */
         [data-testid="stSidebarContent"] > div:first-child > div:last-child {
             position: sticky;
             bottom: 0px;
             margin-top: auto;
             padding-top: 15px;
             padding-bottom: 25px;
-            background-color: var(--secondary-background-color); /* บังพื้นหลังเวลาเลื่อนแชท */
+            background-color: var(--secondary-background-color); 
             z-index: 99;
         }
     </style>
@@ -144,10 +142,10 @@ if st.session_state["current_user"] in ADMIN_USERS:
     with st.sidebar:
         st.success(f"ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
         st.write("---")
-        # ปุ่ม Logout จะถูกดันไปล่างสุดด้วย CSS ที่เราเขียนไว้ด้านบนอัตโนมัติ
-        st.button("ออกจากระบบ", on_click=logout, use_container_width=True)
+        st.markdown('<div style="flex-grow: 1;"></div>', unsafe_allow_html=True)
+        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
 
-    st.title("ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
+    st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
     st.write("---")
 
     if os.path.exists("chat_logs.csv"):
@@ -251,23 +249,24 @@ with st.sidebar:
     st.write("---")
     
     st.write("**History**")
-    # กล่องใส่ประวัติที่มีอิสระในการ Scroll โดยไม่ดันปุ่มด้านล่าง
-    chat_history_container = st.container(height=450, border=False)
-    with chat_history_container:
-        if not my_history_df.empty:
-            chat_groups = my_history_df.groupby("Chat ID", sort=False)
-            for chat_id, group in reversed(list(chat_groups)):
-                first_question = str(group.iloc[0]["คำถาม"])
-                short_name = first_question[:25] + "..." if len(first_question) > 25 else first_question
-                
-                is_active = (chat_id == st.session_state.get("current_chat_id"))
-                btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
-                
-                st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
-        else:
-            st.caption("ยังไม่มีประวัติการแชท")
     
-    # ปุ่ม Logout จะถูกล็อคไว้ด้านล่างสุดโดยอัตโนมัติด้วย CSS
+    # 📌 ลบกล่องจำกัดความสูงออก ให้รายชื่อห้องแชทเรียงลงมาตามปกติเลย
+    if not my_history_df.empty:
+        chat_groups = my_history_df.groupby("Chat ID", sort=False)
+        for chat_id, group in reversed(list(chat_groups)):
+            first_question = str(group.iloc[0]["คำถาม"])
+            short_name = first_question[:25] + "..." if len(first_question) > 25 else first_question
+            
+            is_active = (chat_id == st.session_state.get("current_chat_id"))
+            btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
+            
+            st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
+    else:
+        st.caption("ยังไม่มีประวัติการแชท")
+    
+    # ดันปุ่ม Logout ให้ไปอยู่ล่างสุด
+    st.markdown('<div style="flex-grow: 1;"></div>', unsafe_allow_html=True)
+    st.write("---")
     st.button("🚪 Logout", on_click=logout, use_container_width=True)
 
 st.title("Oran ผู้ช่วย AI สำหรับองค์กร")
