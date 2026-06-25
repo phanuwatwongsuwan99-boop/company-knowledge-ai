@@ -1,5 +1,4 @@
 import streamlit as st
-# --- เพิ่ม Loaders สำหรับไฟล์ชนิดต่างๆ ---
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
@@ -95,27 +94,25 @@ ADMIN_USERS = ["boss", "admin"]
 # 👑 หน้าจอสำหรับผู้ดูแลระบบ (ADMIN PANEL)
 # =========================================================
 if st.session_state["current_user"] in ADMIN_USERS:
-    
     with st.sidebar:
-        st.success(f"ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
+        st.success(f"👑 สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
         st.write("---")
-        st.button("ออกจากระบบ", on_click=logout, use_container_width=True)
+        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
         st.write("---")
 
-    st.title("ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
+    st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
     st.write("---")
 
     if os.path.exists("chat_logs.csv"):
         with open("chat_logs.csv", "rb") as f:
             st.download_button(
-                label="ดาวน์โหลดประวัติการแชททั้งหมด (CSV)",
+                label="📥 ดาวน์โหลดประวัติการแชททั้งหมด (CSV)",
                 data=f,
                 file_name=f"chat_logs_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv"
             )
         
         df = pd.read_csv("chat_logs.csv")
-        
         total_questions = len(df)
         unanswered_questions = len(df[df["สถานะการตอบ"] == "ตอบไม่ได้"])
         answered_questions = total_questions - unanswered_questions
@@ -129,7 +126,7 @@ if st.session_state["current_user"] in ADMIN_USERS:
         
         def get_top_keywords(text_series, top_n=5):
             words = []
-            stop_words = ["คะ", "ครับ", "อะไร", "ไหม", "มี", "ที่", "ได้", "การ", "ใน", "ของ", "อยาก", "สอบถาม"]
+            stop_words = ["คะ", "ครับ", "อะไร", "ไหม", "มี", "ที่", "ได้", "การ", "ใน", "ของ", "อยาก", "สอบถาม", "ขอ"]
             for text in text_series.dropna():
                 for word in str(text).split():
                     if len(word) > 2 and word not in stop_words:
@@ -145,7 +142,6 @@ if st.session_state["current_user"] in ADMIN_USERS:
             st.info("ระบบยังเก็บสถิติตัวแปรคำถามไม่เพียงพอ")
 
         st.write("---")
-
         st.subheader("⚠️ 5 อันดับหัวข้อที่พนักงานสงสัย แต่ 'ยังไม่มีคำตอบ'")
         unanswered_df = df[df["สถานะการตอบ"] == "ตอบไม่ได้"]
         top_unanswered_keywords = get_top_keywords(unanswered_df["คำถาม"])
@@ -160,10 +156,8 @@ if st.session_state["current_user"] in ADMIN_USERS:
         st.write("---")
         st.subheader("📋 ตารางประวัติการใช้งานล่าสุด 20 รายการ")
         st.dataframe(df.tail(20), use_container_width=True)
-
     else:
         st.info("ขณะนี้ยังไม่มีพนักงานเข้ามาใช้งานระบบ จึงยังไม่มีข้อมูลสถิติรายงานสำหรับคุณ")
-    
     st.stop() 
 
 # =========================================================
@@ -185,7 +179,6 @@ st.write("---")
 def setup_knowledge_base():
     docs = []
     
-    # 📌 สร้างฟังก์ชันโหลดไฟล์แบบอเนกประสงค์
     def load_document(file_path):
         ext = os.path.splitext(file_path)[1].lower()
         try:
@@ -198,13 +191,11 @@ def setup_knowledge_base():
             elif ext == '.docx':
                 return Docx2txtLoader(file_path).load()
             elif ext == '.xlsx':
-                # ใช้ pandas โหลดก่อน เพื่อป้องกัน Error จากรูปแบบไฟล์ซับซ้อน
                 df = pd.read_excel(file_path)
-                # บันทึกเป็นไฟล์ CSV ชั่วคราวเพื่อให้ LangChain อ่านง่ายขึ้น
                 temp_csv = f"temp_{os.path.basename(file_path)}.csv"
                 df.to_csv(temp_csv, index=False, encoding='utf-8-sig')
                 data = CSVLoader(temp_csv, encoding='utf-8-sig').load()
-                os.remove(temp_csv) # ลบไฟล์ชั่วคราวทิ้ง
+                os.remove(temp_csv) 
                 return data
             else:
                 return []
@@ -212,7 +203,6 @@ def setup_knowledge_base():
             st.warning(f"ไม่สามารถอ่านไฟล์ {file_path} ได้: {str(e)}")
             return []
 
-    # 📌 กวาดหาไฟล์ทุกประเภทที่รองรับ
     supported_extensions = ['*.pdf', '*.txt', '*.csv', '*.docx', '*.xlsx']
     all_files = []
     for ext in supported_extensions:
@@ -222,7 +212,6 @@ def setup_knowledge_base():
         st.error("ไม่พบไฟล์เอกสารใด ๆ (PDF, TXT, CSV, DOCX, XLSX) ในระบบ")
         st.stop()
         
-    # โหลดไฟล์ทั้งหมด
     for file_path in all_files:
         docs.extend(load_document(file_path))
         
@@ -233,15 +222,21 @@ def setup_knowledge_base():
     return vectorstore
 
 vectorstore = setup_knowledge_base()
-retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+
+# 📌 จุดที่ 1: ขยายรัศมีการค้นหาจาก 3 เป็น 6 ย่อหน้า เพื่อให้ได้ข้อมูลที่กว้างขึ้น
+retriever = vectorstore.as_retriever(search_kwargs={"k": 6})
 
 llm = ChatGroq(model_name="llama-3.1-8b-instant", api_key=st.secrets["GROQ_API_KEY"], temperature=0.1)
 
 NOT_FOUND_MSG = "ไม่พบข้อมูลในเอกสารขององค์กร"
 
+# 📌 จุดที่ 2: อัปเกรดคำสั่งฝังหัว (Prompt) ให้ฉลาดและวิเคราะห์ความต้องการเก่งขึ้น
 system_prompt = (
-    "คุณคือผู้ช่วย AI ขององค์กร จงตอบคำถามโดยใช้ข้อมูลจาก Context ด้านล่างนี้เท่านั้น\n"
-    f"ถ้าไม่มีข้อมูลให้ตอบคำว่า '{NOT_FOUND_MSG}' เท่านั้น ห้ามเดาเอาเองเด็ดขาด\n\n"
+    "คุณคือผู้ช่วย AI อัจฉริยะขององค์กร จงใช้ข้อมูลจาก Context ด้านล่างเพื่อตอบคำถาม\n\n"
+    "คำแนะนำเพิ่มเติมเพื่อให้คุณฉลาดขึ้น:\n"
+    "1. หากผู้ใช้พิมพ์คำถามมาสั้นๆ หรือพิมพ์แค่คีย์เวิร์ด (เช่น 'วันลากิจ', 'เบิกเงิน') ให้คุณตีความว่าผู้ใช้อยากรู้รายละเอียดทั้งหมดเกี่ยวกับเรื่องนั้น และช่วยสรุปข้อมูลทั้งหมดที่คุณเจอใน Context มาอธิบายให้ครบถ้วนในรูปแบบที่อ่านง่าย\n"
+    "2. พยายามตอบให้ตรงประเด็น เป็นมิตร และใช้การจัดหน้า (เช่น Bullet points) ถ้าข้อมูลมีหลายข้อ\n"
+    f"3. ถ้าข้อมูลใน Context ไม่มีเรื่องที่ถามเลยจริงๆ ให้ตอบคำว่า '{NOT_FOUND_MSG}' เท่านั้น ห้ามเดาเอาเองเด็ดขาด\n\n"
     "Context:\n{context}"
 )
 prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
@@ -256,7 +251,6 @@ rag_chain = (
     | StrOutputParser()
 )
 
-# โหลดประวัติแชทเก่าเมื่อล็อคอิน
 if "messages" not in st.session_state:
     st.session_state.messages = []
     
@@ -275,13 +269,13 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร..."):
+if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร... (พิมพ์คำสั้นๆ ก็ได้นะ)"):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
     with st.chat_message("assistant"):
-        with st.spinner("AI กำลังคิด..."):
+        with st.spinner("AI กำลังวิเคราะห์และสรุปข้อมูลให้คุณ..."):
             response = rag_chain.invoke(user_input)
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
