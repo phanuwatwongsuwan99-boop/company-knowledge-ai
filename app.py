@@ -185,18 +185,9 @@ st.markdown(
         [data-testid="stChatMessage"]:last-child {{
             border-bottom: none;
         }}
-        [data-testid="stChatMessageAvatarUser"] {{
-            background: var(--surface-2) !important;
-        }}
-        /* Assistant avatar now shows the brand logo image instead of a plain gradient circle */
+        /* No avatars/icons — just the question and answer text */
+        [data-testid="stChatMessageAvatarUser"],
         [data-testid="stChatMessageAvatarAssistant"] {{
-            background: var(--surface) !important;
-            background-image: url('{LOGO_IMG}') !important;
-            background-size: 70% !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-        }}
-        [data-testid="stChatMessageAvatarAssistant"] svg {{
             display: none !important;
         }}
         /* User messages flip to the right side so question/answer are visually separated.
