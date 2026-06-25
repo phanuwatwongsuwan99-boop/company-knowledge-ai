@@ -9,24 +9,24 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 import os
 import glob
+import time  # 👈 เพิ่มเครื่องมือควบคุมเวลาสำหรับแอนิเมชันไดโนเสาร์
 
 st.set_page_config(page_title="Corporate AI Assistant", page_icon="🤖")
 
-# --- ระบบ Login แบบแยก Username / Password ---
+# --- ระบบ Login ---
 def check_password():
     def login_attempt():
         user = st.session_state["username_input"]
         pw = st.session_state["password_input"]
         
-        # ไปเช็กในตู้เซฟว่ามีชื่อและรหัสนี้ไหม
         if "passwords" in st.secrets and user in st.secrets["passwords"]:
             if str(st.secrets["passwords"][user]) == str(pw):
                 st.session_state["password_correct"] = True
-                st.session_state["current_user"] = user # จำชื่อคนล็อคอินไว้
-                del st.session_state["password_input"] # ลบรหัสทิ้งเพื่อความปลอดภัย
+                st.session_state["current_user"] = user 
+                st.session_state["show_dino"] = True  # 👈 สั่งให้เปิดหน้าไดโนเสาร์วิ่งตอนเข้าสู่ระบบสำเร็จ
+                del st.session_state["password_input"] 
                 return
         
-        # ถ้ารหัสผิด
         st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
@@ -46,13 +46,37 @@ def check_password():
 
 if not check_password():
     st.stop()
-# ---------------------------------------------
 
-# โชว์ชื่อพนักงานที่มุมขวาบน
+# --- แอนิเมชันไดโนเสาร์โหลดดิ้ง 🦖 ---
+if st.session_state.get("show_dino", False):
+    st.title("🤖 กำลังเข้าสู่ระบบ...")
+    
+    # สร้างพื้นที่ว่างสำหรับโชว์ข้อความและแถบโหลด
+    dino_text = st.empty()
+    progress_bar = st.progress(0)
+    
+    # ให้ไดโนเสาร์วิ่งจาก 1 ถึง 100
+    for percent in range(1, 101):
+        # เคาะ spacebar ดันไดโนเสาร์ไปทางขวาตามเปอร์เซ็นต์
+        spaces = "&nbsp;" * percent 
+        dino_text.markdown(f"{spaces}🦖 **กำลังดึงข้อมูลองค์กร... {percent}%**")
+        progress_bar.progress(percent)
+        time.sleep(0.02)  # ความเร็วในการวิ่ง (ยิ่งค่าน้อยยิ่งวิ่งเร็ว)
+        
+    # ลบแถบโหลดทิ้งเมื่อวิ่งเสร็จ
+    dino_text.empty()
+    progress_bar.empty()
+    
+    # ปิดสวิตช์ไดโนเสาร์เพื่อไม่ให้มันโชว์อีก และโหลดหน้าหลัก
+    st.session_state["show_dino"] = False
+    st.rerun()
+# ------------------------------------
+
+# --- หน้าแชทหลัก ---
 st.caption(f"👤 เข้าสู่ระบบโดย: {st.session_state['current_user']}")
 st.title("🤖 ผู้ช่วย AI สำหรับองค์กร")
 
-@st.cache_resource(show_spinner="กำลังเรียนรู้ข้อมูลองค์กรทั้งหมด...")
+@st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
     docs = []
     pdf_files = glob.glob("*.pdf")
