@@ -104,6 +104,33 @@ if st.session_state["current_user"] in ADMIN_USERS:
     st.write("---")
 
     if os.path.exists("chat_logs.csv"):
+        df = pd.read_csv("chat_logs.csv")
+        
+        # 📌 ---------------------------------------------------------
+        # ระบบตรวจจับและเตือนความจำก่อนไฟล์ถูกเคลียร์ (ภายใน 7 วัน)
+        # ---------------------------------------------------------
+        try:
+            # ดึงเวลาของแถวแรกสุดในไฟล์ประวัติ
+            first_log_time_str = df.iloc[0]["วัน-เวลา"]
+            first_log_time = datetime.strptime(first_log_time_str, "%Y-%m-%d %H:%M:%S")
+            
+            # คำนวณหาอายุของไฟล์ว่าอยู่มานานกี่วันแล้ว
+            tz_th = timezone(timedelta(hours=7))
+            current_time = datetime.now(tz_th).replace(tzinfo=None)
+            file_age_days = (current_time - first_log_time).days
+            
+            # หากไฟล์มีอายุมากกว่าหรือเท่ากับ 5 วัน ให้เปิดสัญญาณเตือนสีส้มทันที
+            if file_age_days >= 5:
+                st.warning(
+                    f"⚠️ **แจ้งเตือนผู้ดูแลระบบ:** ไฟล์ประวัติการแชทนี้ถูกบันทึกสะสมมาเป็นเวลา **{file_age_days} วัน** แล้ว "
+                    f"(เริ่มบันทึกเมื่อ: {first_log_time_str}) ระบบฟรีของ Streamlit Cloud อาจเคลียร์ข้อมูลทิ้งในอีกไม่ช้า "
+                    f"**กรุณากดดาวน์โหลดไฟล์สำรองข้อมูลไว้ที่คอมพิวเตอร์ของคุณทันทีครับ!**"
+                )
+                st.write("")
+        except:
+            pass
+        # ---------------------------------------------------------
+
         with open("chat_logs.csv", "rb") as f:
             st.download_button(
                 label="📥 ดาวน์โหลดประวัติการแชททั้งหมด (CSV)",
@@ -112,7 +139,6 @@ if st.session_state["current_user"] in ADMIN_USERS:
                 mime="text/csv"
             )
         
-        df = pd.read_csv("chat_logs.csv")
         total_questions = len(df)
         unanswered_questions = len(df[df["สถานะการตอบ"] == "ตอบไม่ได้"])
         answered_questions = total_questions - unanswered_questions
@@ -222,19 +248,16 @@ def setup_knowledge_base():
     return vectorstore
 
 vectorstore = setup_knowledge_base()
-
-# 📌 จุดที่ 1: ขยายรัศมีการค้นหาจาก 3 เป็น 6 ย่อหน้า เพื่อให้ได้ข้อมูลที่กว้างขึ้น
 retriever = vectorstore.as_retriever(search_kwargs={"k": 6})
 
 llm = ChatGroq(model_name="llama-3.1-8b-instant", api_key=st.secrets["GROQ_API_KEY"], temperature=0.1)
 
 NOT_FOUND_MSG = "ไม่พบข้อมูลในเอกสารขององค์กร"
 
-# 📌 จุดที่ 2: อัปเกรดคำสั่งฝังหัว (Prompt) ให้ฉลาดและวิเคราะห์ความต้องการเก่งขึ้น
 system_prompt = (
     "คุณคือผู้ช่วย AI อัจฉริยะขององค์กร จงใช้ข้อมูลจาก Context ด้านล่างเพื่อตอบคำถาม\n\n"
     "คำแนะนำเพิ่มเติมเพื่อให้คุณฉลาดขึ้น:\n"
-    "1. หากผู้ใช้พิมพ์คำถามมาสั้นๆ หรือพิมพ์แค่คีย์เวิร์ด (เช่น 'วันลากิจ', 'เบิกเงิน') ให้คุณตีความว่าผู้ใช้อยากรู้รายละเอียดทั้งหมดเกี่ยวกับเรื่องนั้น และช่วยสรุปข้อมูลทั้งหมดที่คุณเจอใน Context มาอธิบายให้ครบถ้วนในรูปแบบที่อ่านง่าย\n"
+    "1. หากผู้ใช้พิมพ์คำถามมาสั้นๆ หรือพิมพ์แค่คีย์เวิร์ด (เช่น 'วันลากิจ', 'เบิกเงิน') ให้คุณตีความว่าผู้ใชอยกรู้รายละเอียดทั้งหมดเกี่ยวกับเรื่องนั้น และช่วยสรุปข้อมูลทั้งหมดที่คุณเจอใน Context มาอธิบายให้ครบถ้วนในรูปแบบที่อ่านง่าย\n"
     "2. พยายามตอบให้ตรงประเด็น เป็นมิตร และใช้การจัดหน้า (เช่น Bullet points) ถ้าข้อมูลมีหลายข้อ\n"
     f"3. ถ้าข้อมูลใน Context ไม่มีเรื่องที่ถามเลยจริงๆ ให้ตอบคำว่า '{NOT_FOUND_MSG}' เท่านั้น ห้ามเดาเอาเองเด็ดขาด\n\n"
     "Context:\n{context}"
