@@ -229,13 +229,13 @@ if os.path.exists("chat_logs.csv"):
         pass
 
 with st.sidebar:
-    st.success(f"👤 บัญชี: **{st.session_state['current_user']}**")
+    st.success(f"บัญชี: **{st.session_state['current_user']}**")
     
     # ปุ่มเปิดห้องแชทใหม่
-    st.button("➕ แชทใหม่", on_click=new_chat, use_container_width=True, type="primary")
+    st.button("แชทใหม่", on_click=new_chat, use_container_width=True, type="primary")
     st.write("---")
     
-    st.write("📝 **ประวัติการแชทของคุณ**")
+    st.write("**ประวัติการแชท**")
     if not my_history_df.empty:
         # จัดกลุ่มตาม Chat ID เพื่อเอาคำถามแรกมาเป็นชื่อปุ่ม
         chat_groups = my_history_df.groupby("Chat ID", sort=False)
