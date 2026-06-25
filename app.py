@@ -94,15 +94,11 @@ st.markdown(
             border-right: 1px solid var(--border);
         }}
         [data-testid="stSidebarContent"]::-webkit-scrollbar {{ display: none; }}
-        [data-testid="stSidebarContent"] {{ scrollbar-width: none; }}
-        [data-testid="stSidebarContent"] > div:first-child {{
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }}
-        [data-testid="stSidebarContent"] > div:first-child > div:last-child {{
-            margin-top: auto;
-            padding-bottom: 20px;
+        [data-testid="stSidebarContent"] {{
+            scrollbar-width: none;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden !important;
         }}
         /* Style Streamlit's native collapse control to match the dark theme */
         [data-testid="stSidebarCollapsedControl"] button,
