@@ -11,7 +11,7 @@ import os
 import glob
 import time
 import csv
-import pandas as pd  # 👈 เพิ่ม pandas เพื่อใช้คำนวณและทำ Report
+import pandas as pd
 from collections import Counter
 from datetime import datetime, timezone, timedelta
 
@@ -26,9 +26,13 @@ def log_chat(username, question, answer, status):
     with open("chat_logs.csv", "a", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         if not file_exists:
-            # เพิ่มคอลัมน์ สถานะ เพื่อระบุว่า AI ตอบได้หรือตอบไม่ได้
             writer.writerow(["วัน-เวลา", "ชื่อพนักงาน", "คำถาม", "คำตอบจาก AI", "สถานะการตอบ"])
         writer.writerow([now, username, question, answer, status])
+
+# --- ฟังก์ชันออกจากระบบ (Logout) ---
+def logout():
+    st.session_state.clear()
+    st.rerun()
 
 # --- ระบบ Login ---
 def check_password():
@@ -78,18 +82,22 @@ if st.session_state.get("show_dino", False):
     st.session_state["show_dino"] = False
     st.rerun()
 
-# กองอำนวยการกำหนดสิทธิ์ Admin
 ADMIN_USERS = ["boss", "admin"] 
 
 # =========================================================
-# 👑 หน้าจอสำหรับผู้ดูแลระบบ (ADMIN PANEL เท่านั้น - ไม่มีช่องแชท)
+# 👑 หน้าจอสำหรับผู้ดูแลระบบ (ADMIN PANEL)
 # =========================================================
 if st.session_state["current_user"] in ADMIN_USERS:
+    
+    with st.sidebar:
+        st.success(f"👑 สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
+        st.write("---")
+        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
+        st.write("---")
+
     st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
-    st.caption(f"ยินดีต้อนรับผู้ดูแลระบบ: {st.session_state['current_user']}")
     st.write("---")
 
-    # ส่วนดาวน์โหลดข้อมูล
     if os.path.exists("chat_logs.csv"):
         with open("chat_logs.csv", "rb") as f:
             st.download_button(
@@ -99,10 +107,8 @@ if st.session_state["current_user"] in ADMIN_USERS:
                 mime="text/csv"
             )
         
-        # --- ประมวลผลทำข้อมูลรายงาน (Report Analytics) ---
         df = pd.read_csv("chat_logs.csv")
         
-        # สรุปตัวเลขเบื้องต้น (KPI Cards)
         total_questions = len(df)
         unanswered_questions = len(df[df["สถานะการตอบ"] == "ตอบไม่ได้"])
         answered_questions = total_questions - unanswered_questions
@@ -114,10 +120,8 @@ if st.session_state["current_user"] in ADMIN_USERS:
         
         st.write("---")
         
-        # ฟังก์ชันจัดกลุ่มคำถามแบบง่าย (Keyword Extraction)
         def get_top_keywords(text_series, top_n=5):
             words = []
-            # คำที่เราต้องการคัดออกเพราะถามบ่อยแต่ไม่ใช่สาระสำคัญ
             stop_words = ["คะ", "ครับ", "อะไร", "ไหม", "มี", "ที่", "ได้", "การ", "ใน", "ของ", "อยาก", "สอบถาม"]
             for text in text_series.dropna():
                 for word in str(text).split():
@@ -125,45 +129,50 @@ if st.session_state["current_user"] in ADMIN_USERS:
                         words.append(word)
             return Counter(words).most_common(top_n)
 
-        # 1. รายงานหัวข้อคำถามที่พนักงานถามบ่อยที่สุด
         st.subheader("🔥 5 อันดับหัวข้อ/คำถาม ที่พนักงานถามบ่อยที่สุด")
         top_keywords = get_top_keywords(df["คำถาม"])
         if top_keywords:
             for rank, (word, count) in enumerate(top_keywords, 1):
-                st.write(f"**อันดับ {rank}:** หัวข้อเกี่ยวกับเกี่ยวกับ **'{word}'** (มีการถามถึง {count} ครั้ง)")
+                st.write(f"**อันดับ {rank}:** หัวข้อเกี่ยวกับ **'{word}'** (ถาม {count} ครั้ง)")
         else:
             st.info("ระบบยังเก็บสถิติตัวแปรคำถามไม่เพียงพอ")
 
         st.write("---")
 
-        # 2. รายงานคำถามที่ AI ตอบไม่ได้ แต่ดันโดนถามบ่อย (ต้องเอาข้อมูลมาเพิ่มใน PDF)
-        st.subheader("⚠️ 5 อันดับหัวข้อที่พนักงานสงสัย แต่ในเอกสารองค์กร 'ยังไม่มีคำตอบ'")
+        st.subheader("⚠️ 5 อันดับหัวข้อที่พนักงานสงสัย แต่ 'ยังไม่มีคำตอบ'")
         unanswered_df = df[df["สถานะการตอบ"] == "ตอบไม่ได้"]
         top_unanswered_keywords = get_top_keywords(unanswered_df["คำถาม"])
         
         if top_unanswered_keywords:
             st.error("คำเตือน: หัวข้อเหล่านี้ถูกถามบ่อยแต่ AI ตอบไม่ได้ กรุณาอัปเดตไฟล์ PDF เพิ่มเติม")
             for rank, (word, count) in enumerate(top_unanswered_keywords, 1):
-                st.write(f"❌ **อันดับ {rank}:** เรื่อง **'{word}'** (พนักงานพยายามถามแต่ไม่มีคำตอบ {count} ครั้ง)")
+                st.write(f"❌ **อันดับ {rank}:** เรื่อง **'{word}'** (พยายามถามแต่ไม่มีคำตอบ {count} ครั้ง)")
         else:
             st.success("ยอดเยี่ยมมาก! ปัจจุบันยังไม่มีคำถามที่เอกสารตอบไม่ได้ถูกถามซ้ำ")
 
         st.write("---")
-        # แสดงตารางประวัติล่าสุดประกอบหน้าเว็บ Admin
         st.subheader("📋 ตารางประวัติการใช้งานล่าสุด 20 รายการ")
         st.dataframe(df.tail(20), use_container_width=True)
 
     else:
         st.info("ขณะนี้ยังไม่มีพนักงานเข้ามาใช้งานระบบ จึงยังไม่มีข้อมูลสถิติรายงานสำหรับคุณ")
     
-    st.stop() # หยุดการทำงานตรงนี้ เพื่อไม่ให้ Admin เห็นหน้าจอแชทด้านล่าง
+    st.stop() 
 
 # =========================================================
-# 💬 หน้าจอสำหรับพนักงานทั่วไป (CHAT INTERFACE เท่านั้น - ไม่มีเมนูและรายงาน)
+# 💬 หน้าจอสำหรับพนักงานทั่วไป (CHAT INTERFACE)
 # =========================================================
-st.set_option('client.showSidebarNavigation', False) # ซ่อนแถบเมนูด้านซ้ายอย่างสิ้นเชิง
-st.title("🤖 ผู้ช่วย AI สำหรับองค์กร")
-st.caption(f"👤 บัญชีผู้ใช้พนักงาน: {st.session_state['current_user']}")
+st.set_option('client.showSidebarNavigation', False)
+
+header_col1, header_col2 = st.columns([8, 2])
+with header_col1:
+    st.title("🤖 ผู้ช่วย AI สำหรับองค์กร")
+    st.caption(f"👤 บัญชีผู้ใช้พนักงาน: {st.session_state['current_user']}")
+with header_col2:
+    st.write("") 
+    st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
+
+st.write("---")
 
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
@@ -188,7 +197,6 @@ retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
 llm = ChatGroq(model_name="llama-3.1-8b-instant", api_key=st.secrets["GROQ_API_KEY"], temperature=0.1)
 
-# ข้อความบังคับตอบไม่ได้ ถ้าไม่เจอในเอกสาร
 NOT_FOUND_MSG = "ไม่พบข้อมูลในเอกสารขององค์กร"
 
 system_prompt = (
@@ -208,13 +216,34 @@ rag_chain = (
     | StrOutputParser()
 )
 
+# 📌 ---------------------------------------------------------
+# ระบบดึงความจำเก่า: โหลดประวัติแชทจากไฟล์ CSV เมื่อพนักงานล็อคอิน
+# ---------------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
+    
+    # เช็คว่ามีไฟล์ประวัติอยู่หลังบ้านไหม
+    if os.path.exists("chat_logs.csv"):
+        try:
+            # อ่านไฟล์
+            df_history = pd.read_csv("chat_logs.csv")
+            # เลือกมาเฉพาะประวัติที่เป็นชื่อของพนักงานคนนี้
+            my_history = df_history[df_history["ชื่อพนักงาน"] == st.session_state["current_user"]]
+            
+            # เอาคำถาม-คำตอบเก่า มาเรียงใส่หน้าจอ
+            for index, row in my_history.iterrows():
+                st.session_state.messages.append({"role": "user", "content": str(row["คำถาม"])})
+                st.session_state.messages.append({"role": "assistant", "content": str(row["คำตอบจาก AI"])})
+        except:
+            pass # ถ้าไฟล์มีปัญหา ให้อ่านข้ามไปเลย จะได้ไม่ทำให้ระบบพัง
+# ---------------------------------------------------------
 
+# แสดงข้อความในหน้าจอ
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# กล่องพิมพ์แชท
 if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
@@ -226,10 +255,8 @@ if user_input := st.chat_input("พิมพ์คำถามเกี่ยว
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
             
-            # ตรวจสอบว่ารอบนี้ AI ตอบได้ หรือตอบไม่ได้
             status = "ตอบได้"
             if NOT_FOUND_MSG in response:
                 status = "ตอบไม่ได้"
                 
-            # บันทึกประวัติลงไฟล์หลังบ้าน
             log_chat(st.session_state["current_user"], user_input, response, status)
