@@ -24,6 +24,31 @@ import uuid
 
 st.set_page_config(page_title="Corporate AI System", page_icon="🤖", layout="wide")
 
+# 📌 CSS จัดการหน้าตา (ล็อคปุ่ม Logout ให้อยู่ล่างสุดแบบตายตัว ไม่ขยับตาม Scroll)
+st.markdown(
+    """
+    <style>
+        /* บังคับ Sidebar ให้มีความยาวอย่างน้อยเต็มหน้าจอ */
+        [data-testid="stSidebarContent"] > div:first-child {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        /* ล็อคปุ่มอันสุดท้าย (Logout) ให้อยู่ติดขอบล่างเสมอ */
+        [data-testid="stSidebarContent"] > div:first-child > div:last-child {
+            position: sticky;
+            bottom: 0px;
+            margin-top: auto;
+            padding-top: 15px;
+            padding-bottom: 25px;
+            background-color: var(--secondary-background-color); /* บังพื้นหลังเวลาเลื่อนแชท */
+            z-index: 99;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- ฟังก์ชันบันทึกประวัติการแชทลงไฟล์หลังบ้าน ---
 def log_chat(chat_id, username, question, answer, status):
     tz_th = timezone(timedelta(hours=7))
@@ -48,7 +73,7 @@ def new_chat():
 
 def switch_chat(selected_chat_id):
     st.session_state["current_chat_id"] = selected_chat_id
-    st.session_state.messages = [] 
+    st.session_state.messages = []
 
 # --- ระบบ Login แบบจัดกึ่งกลาง ---
 def check_password():
@@ -119,12 +144,10 @@ if st.session_state["current_user"] in ADMIN_USERS:
     with st.sidebar:
         st.success(f"ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
         st.write("---")
-        # ใช้ container พิเศษเพื่อดันปุ่ม Logout ลงล่างสุด
-        st.markdown('<div style="flex-grow: 1;"></div>', unsafe_allow_html=True)
-        for _ in range(15): st.write("") # ดันเว้นระยะบรรทัด
-        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
+        # ปุ่ม Logout จะถูกดันไปล่างสุดด้วย CSS ที่เราเขียนไว้ด้านบนอัตโนมัติ
+        st.button("ออกจากระบบ", on_click=logout, use_container_width=True)
 
-    st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
+    st.title("ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
     st.write("---")
 
     if os.path.exists("chat_logs.csv"):
@@ -212,9 +235,6 @@ if st.session_state["current_user"] in ADMIN_USERS:
 # =========================================================
 st.set_option('client.showSidebarNavigation', False)
 
-# 📌 ---------------------------------------------------------
-# ระบบแถบเมนูด้านซ้ายสำหรับพนักงาน (แสดงห้องแชทย้อนหลัง + ปุ่ม Logout ด้านล่างสุด)
-# ---------------------------------------------------------
 my_history_df = pd.DataFrame()
 if os.path.exists("chat_logs.csv"):
     try:
@@ -224,17 +244,15 @@ if os.path.exists("chat_logs.csv"):
     except:
         pass
 
+# 📌 แถบเมนูด้านซ้ายสำหรับพนักงาน
 with st.sidebar:
-    st.success(f"👤 บัญชี: **{st.session_state['current_user']}**")
-    
+    st.success(f"Username: **{st.session_state['current_user']}**")
     st.button("➕ New chat", on_click=new_chat, use_container_width=True, type="primary")
     st.write("---")
     
-    st.write("📝 **History**")
-    
-    # 📌 สร้างคอนเทนเนอร์สำหรับใส่ประวัติแชท เพื่อให้มันเลื่อนขึ้นลงได้โดยไม่ดันปุ่ม Logout
-    chat_history_container = st.container(height=400, border=False)
-    
+    st.write("**History**")
+    # กล่องใส่ประวัติที่มีอิสระในการ Scroll โดยไม่ดันปุ่มด้านล่าง
+    chat_history_container = st.container(height=450, border=False)
     with chat_history_container:
         if not my_history_df.empty:
             chat_groups = my_history_df.groupby("Chat ID", sort=False)
@@ -249,11 +267,8 @@ with st.sidebar:
         else:
             st.caption("ยังไม่มีประวัติการแชท")
     
-    # 📌 ดันปุ่ม Logout ให้ไปอยู่ล่างสุดของแถบเมนูด้านซ้าย
-    st.markdown('<div style="flex-grow: 1;"></div>', unsafe_allow_html=True)
-    st.write("---")
+    # ปุ่ม Logout จะถูกล็อคไว้ด้านล่างสุดโดยอัตโนมัติด้วย CSS
     st.button("🚪 Logout", on_click=logout, use_container_width=True)
-# ---------------------------------------------------------
 
 st.title("Oran ผู้ช่วย AI สำหรับองค์กร")
 st.write("---")
@@ -364,5 +379,4 @@ if user_input := st.chat_input("พิมพ์คำถามเกี่ยว
                 
             log_chat(st.session_state["current_chat_id"], st.session_state["current_user"], user_input, response, status)
             
-            # บังคับรีเฟรช 1 ครั้งเพื่อให้อัปเดตชื่อห้องแชทในเมนูด้านซ้าย
             st.rerun()
