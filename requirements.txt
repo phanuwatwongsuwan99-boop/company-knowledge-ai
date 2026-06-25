@@ -7,3 +7,6 @@ langchain-text-splitters
 faiss-cpu
 pypdf
 sentence-transformers
+pandas
+openpyxl
+docx2txt
