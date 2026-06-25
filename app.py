@@ -8,6 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 import os
+import glob # เพิ่มเครื่องมือค้นหาไฟล์
 
 st.set_page_config(page_title="Corporate AI Assistant", page_icon="🤖")
 
@@ -34,10 +35,21 @@ if not check_password():
 
 st.title("🤖 ผู้ช่วย AI สำหรับองค์กร")
 
-@st.cache_resource(show_spinner="กำลังเรียนรู้ข้อมูลองค์กร...")
+@st.cache_resource(show_spinner="กำลังเรียนรู้ข้อมูลองค์กรทั้งหมด...")
 def setup_knowledge_base():
-    loader = PyPDFLoader("knowledge.pdf")
-    docs = loader.load()
+    docs = []
+    # ค้นหาไฟล์ทั้งหมดที่ลงท้ายด้วย .pdf ในโฟลเดอร์นี้
+    pdf_files = glob.glob("*.pdf")
+    
+    if not pdf_files:
+        st.error("ไม่พบไฟล์เอกสาร PDF ใด ๆ ในระบบ กรุณาอัปโหลดไฟล์ขึ้น GitHub")
+        st.stop()
+        
+    # ลูปอ่านข้อมูลจากทุกไฟล์ PDF ที่เจอ
+    for file_path in pdf_files:
+        loader = PyPDFLoader(file_path)
+        docs.extend(loader.load())
+        
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
     splits = text_splitter.split_documents(docs)
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
@@ -56,7 +68,6 @@ system_prompt = (
 )
 prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
 
-# --- เปลี่ยนมาใช้วิธีใหม่ตรงนี้ เพื่อเลี่ยง Error ---
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
@@ -66,7 +77,6 @@ rag_chain = (
     | llm
     | StrOutputParser()
 )
-# ----------------------------------------
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
