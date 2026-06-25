@@ -5,8 +5,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_retrieval_chain
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 import os
 
 st.set_page_config(page_title="Corporate AI Assistant", page_icon="🤖")
@@ -56,8 +56,17 @@ system_prompt = (
 )
 prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
 
-question_answer_chain = create_stuff_documents_chain(llm, prompt)
-rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+# --- เปลี่ยนมาใช้วิธีใหม่ตรงนี้ เพื่อเลี่ยง Error ---
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+rag_chain = (
+    {"context": retriever | format_docs, "input": RunnablePassthrough()}
+    | prompt
+    | llm
+    | StrOutputParser()
+)
+# ----------------------------------------
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -73,6 +82,6 @@ if user_input := st.chat_input("พิมพ์คำถาม..."):
 
     with st.chat_message("assistant"):
         with st.spinner("AI กำลังคิด..."):
-            response = rag_chain.invoke({"input": user_input})
-            st.markdown(response["answer"])
-            st.session_state.messages.append({"role": "assistant", "content": response["answer"]})
+            response = rag_chain.invoke(user_input)
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
