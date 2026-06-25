@@ -302,48 +302,6 @@ st.markdown(
             text-align: center;
         }}
 
-        /* =========================================================
-           TOMATO ROLLING LOADER — shown while logging in, before the
-           chat page is ready. Loops left-to-right indefinitely until
-           this screen is replaced by the real chat page.
-           ========================================================= */
-        .tomato-roll-track {{
-            position: relative;
-            width: 100%;
-            max-width: 360px;
-            height: 90px;
-            margin: 18px auto 4px auto;
-            overflow: hidden;
-        }}
-        .tomato-roll-sprite {{
-            position: absolute;
-            top: 50%;
-            left: -90px;
-            width: 80px;
-            height: 80px;
-            margin-top: -40px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            filter: drop-shadow(0 6px 14px rgba(255, 60, 30, 0.35));
-            animation:
-                tomato-roll-move 2.6s linear infinite,
-                tomato-roll-spin 0.45s steps(6) infinite;
-        }}
-        @keyframes tomato-roll-move {{
-            0%   {{ left: -90px; }}
-            100% {{ left: 100%; }}
-        }}
-        @keyframes tomato-roll-spin {{
-            0%   {{ background-image: url('{TOMATO_FRAMES[0]}'); }}
-            17%  {{ background-image: url('{TOMATO_FRAMES[1]}'); }}
-            34%  {{ background-image: url('{TOMATO_FRAMES[2]}'); }}
-            51%  {{ background-image: url('{TOMATO_FRAMES[3]}'); }}
-            68%  {{ background-image: url('{TOMATO_FRAMES[4]}'); }}
-            85%  {{ background-image: url('{TOMATO_FRAMES[5]}'); }}
-            100% {{ background-image: url('{TOMATO_FRAMES[0]}'); }}
-        }}
-
         /* Admin badge accent */
         .admin-pill {{
             display: inline-block;
