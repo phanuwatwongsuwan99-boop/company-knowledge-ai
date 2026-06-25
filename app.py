@@ -188,8 +188,33 @@ st.markdown(
         [data-testid="stChatMessageAvatarUser"] {{
             background: var(--surface-2) !important;
         }}
+        /* Assistant avatar now shows the brand logo image instead of a plain gradient circle */
         [data-testid="stChatMessageAvatarAssistant"] {{
-            background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange)) !important;
+            background: var(--surface) !important;
+            background-image: url('{LOGO_IMG}') !important;
+            background-size: 70% !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+        }}
+        [data-testid="stChatMessageAvatarAssistant"] svg {{
+            display: none !important;
+        }}
+        /* User messages flip to the right side so question/answer are visually separated.
+           We mark each user message with our own <span class="chat-user-marker"> (rendered in
+           Python below) and use :has() to target the parent — this is version-independent,
+           unlike guessing Streamlit's internal emotion-cache class names or aria-labels. */
+        [data-testid="stChatMessage"]:has(.chat-user-marker) {{
+            flex-direction: row-reverse;
+        }}
+        [data-testid="stChatMessage"]:has(.chat-user-marker) [data-testid="stChatMessageContent"] {{
+            text-align: right;
+        }}
+        [data-testid="stChatMessage"]:has(.chat-user-marker) [data-testid="stChatMessageContent"] p {{
+            display: inline-block;
+            background: var(--surface-2);
+            padding: 10px 16px;
+            border-radius: var(--radius-md);
+            text-align: left;
         }}
         /* Chat input — unify every nested layer to the same background so seams disappear */
         /* The bottom bar Streamlit wraps around chat_input has its own background — neutralize it */
@@ -729,7 +754,13 @@ if not st.session_state.messages:
 else:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            if message["role"] == "user":
+                st.markdown(
+                    f'<span class="chat-user-marker" style="display:none"></span>{message["content"]}',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(message["content"])
 
 if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร... (พิมพ์คำสั้นๆ ก็ได้นะ)"):
     if "current_chat_id" not in st.session_state:
@@ -737,7 +768,10 @@ if user_input := st.chat_input("พิมพ์คำถามเกี่ยว
 
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
-        st.markdown(user_input)
+        st.markdown(
+            f'<span class="chat-user-marker" style="display:none"></span>{user_input}',
+            unsafe_allow_html=True
+        )
 
     with st.chat_message("assistant"):
         with st.spinner("AI กำลังวิเคราะห์และสรุปข้อมูลให้คุณ..."):
