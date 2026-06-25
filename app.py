@@ -23,15 +23,6 @@ import pandas as pd
 from collections import Counter
 from datetime import datetime, timezone, timedelta
 import uuid
-from assets import (
-    LOGO_B64_RAW,
-    TOMATO_1_B64_RAW,
-    TOMATO_2_B64_RAW,
-    TOMATO_3_B64_RAW,
-    TOMATO_4_B64_RAW,
-    TOMATO_5_B64_RAW,
-    TOMATO_6_B64_RAW,
-)
 
 st.set_page_config(page_title="Oran AI | Corporate Assistant", page_icon="🟠", layout="wide")
 
