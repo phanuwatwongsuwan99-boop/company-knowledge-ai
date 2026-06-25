@@ -1,5 +1,12 @@
 import streamlit as st
-from langchain_community.document_loaders import PyPDFLoader
+# --- เพิ่ม Loaders สำหรับไฟล์ชนิดต่างๆ ---
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    TextLoader,
+    CSVLoader,
+    Docx2txtLoader,
+    UnstructuredExcelLoader
+)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -90,9 +97,9 @@ ADMIN_USERS = ["boss", "admin"]
 if st.session_state["current_user"] in ADMIN_USERS:
     
     with st.sidebar:
-        st.success(f"สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
+        st.success(f"👑 สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
         st.write("---")
-        st.button("ออกจากระบบ", on_click=logout, use_container_width=True)
+        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
         st.write("---")
 
     st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
@@ -144,7 +151,7 @@ if st.session_state["current_user"] in ADMIN_USERS:
         top_unanswered_keywords = get_top_keywords(unanswered_df["คำถาม"])
         
         if top_unanswered_keywords:
-            st.error("คำเตือน: หัวข้อเหล่านี้ถูกถามบ่อยแต่ AI ตอบไม่ได้ กรุณาอัปเดตไฟล์ PDF เพิ่มเติม")
+            st.error("คำเตือน: หัวข้อเหล่านี้ถูกถามบ่อยแต่ AI ตอบไม่ได้ กรุณาอัปเดตไฟล์ข้อมูลเพิ่มเติม")
             for rank, (word, count) in enumerate(top_unanswered_keywords, 1):
                 st.write(f"❌ **อันดับ {rank}:** เรื่อง **'{word}'** (พยายามถามแต่ไม่มีคำตอบ {count} ครั้ง)")
         else:
@@ -177,14 +184,47 @@ st.write("---")
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
     docs = []
-    pdf_files = glob.glob("*.pdf")
-    if not pdf_files:
-        st.error("ไม่พบไฟล์เอกสาร PDF ใด ๆ ในระบบ")
+    
+    # 📌 สร้างฟังก์ชันโหลดไฟล์แบบอเนกประสงค์
+    def load_document(file_path):
+        ext = os.path.splitext(file_path)[1].lower()
+        try:
+            if ext == '.pdf':
+                return PyPDFLoader(file_path).load()
+            elif ext == '.txt':
+                return TextLoader(file_path, encoding='utf-8').load()
+            elif ext == '.csv':
+                return CSVLoader(file_path, encoding='utf-8-sig').load()
+            elif ext == '.docx':
+                return Docx2txtLoader(file_path).load()
+            elif ext == '.xlsx':
+                # ใช้ pandas โหลดก่อน เพื่อป้องกัน Error จากรูปแบบไฟล์ซับซ้อน
+                df = pd.read_excel(file_path)
+                # บันทึกเป็นไฟล์ CSV ชั่วคราวเพื่อให้ LangChain อ่านง่ายขึ้น
+                temp_csv = f"temp_{os.path.basename(file_path)}.csv"
+                df.to_csv(temp_csv, index=False, encoding='utf-8-sig')
+                data = CSVLoader(temp_csv, encoding='utf-8-sig').load()
+                os.remove(temp_csv) # ลบไฟล์ชั่วคราวทิ้ง
+                return data
+            else:
+                return []
+        except Exception as e:
+            st.warning(f"ไม่สามารถอ่านไฟล์ {file_path} ได้: {str(e)}")
+            return []
+
+    # 📌 กวาดหาไฟล์ทุกประเภทที่รองรับ
+    supported_extensions = ['*.pdf', '*.txt', '*.csv', '*.docx', '*.xlsx']
+    all_files = []
+    for ext in supported_extensions:
+        all_files.extend(glob.glob(ext))
+
+    if not all_files:
+        st.error("ไม่พบไฟล์เอกสารใด ๆ (PDF, TXT, CSV, DOCX, XLSX) ในระบบ")
         st.stop()
         
-    for file_path in pdf_files:
-        loader = PyPDFLoader(file_path)
-        docs.extend(loader.load())
+    # โหลดไฟล์ทั้งหมด
+    for file_path in all_files:
+        docs.extend(load_document(file_path))
         
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
     splits = text_splitter.split_documents(docs)
@@ -216,34 +256,25 @@ rag_chain = (
     | StrOutputParser()
 )
 
-# 📌 ---------------------------------------------------------
-# ระบบดึงความจำเก่า: โหลดประวัติแชทจากไฟล์ CSV เมื่อพนักงานล็อคอิน
-# ---------------------------------------------------------
+# โหลดประวัติแชทเก่าเมื่อล็อคอิน
 if "messages" not in st.session_state:
     st.session_state.messages = []
     
-    # เช็คว่ามีไฟล์ประวัติอยู่หลังบ้านไหม
     if os.path.exists("chat_logs.csv"):
         try:
-            # อ่านไฟล์
             df_history = pd.read_csv("chat_logs.csv")
-            # เลือกมาเฉพาะประวัติที่เป็นชื่อของพนักงานคนนี้
             my_history = df_history[df_history["ชื่อพนักงาน"] == st.session_state["current_user"]]
             
-            # เอาคำถาม-คำตอบเก่า มาเรียงใส่หน้าจอ
             for index, row in my_history.iterrows():
                 st.session_state.messages.append({"role": "user", "content": str(row["คำถาม"])})
                 st.session_state.messages.append({"role": "assistant", "content": str(row["คำตอบจาก AI"])})
         except:
-            pass # ถ้าไฟล์มีปัญหา ให้อ่านข้ามไปเลย จะได้ไม่ทำให้ระบบพัง
-# ---------------------------------------------------------
+            pass 
 
-# แสดงข้อความในหน้าจอ
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# กล่องพิมพ์แชท
 if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
