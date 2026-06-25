@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
@@ -204,9 +205,6 @@ st.markdown(
             border-radius: 28px !important;
             box-shadow: 0 4px 18px rgba(0,0,0,0.25);
             overflow: hidden;
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: center !important;
         }}
         [data-testid="stChatInput"]:focus-within {{
             border-color: var(--accent-green) !important;
@@ -218,10 +216,6 @@ st.markdown(
             border: none !important;
             box-shadow: none !important;
             padding: 10px 6px 10px 18px !important;
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: center !important;
-            width: 100%;
         }}
         [data-testid="stChatInput"] textarea {{
             background: var(--surface-2) !important;
@@ -230,7 +224,6 @@ st.markdown(
             box-shadow: none !important;
             padding: 0 !important;
             margin: 0 !important;
-            flex: 1 1 auto;
         }}
         [data-testid="stChatInput"] textarea::placeholder {{
             color: var(--text-faint) !important;
@@ -240,8 +233,6 @@ st.markdown(
             background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange)) !important;
             border-radius: 50% !important;
             border: none !important;
-            margin: auto 0 !important;
-            flex-shrink: 0;
         }}
         [data-testid="stChatInputSubmitButton"] svg,
         [data-testid="stChatInput"] button svg {{
@@ -761,3 +752,51 @@ if user_input := st.chat_input("พิมพ์คำถามเกี่ยว
             log_chat(st.session_state["current_chat_id"], st.session_state["current_user"], user_input, response, status)
 
             st.rerun()
+
+# =========================================================
+# 🛠️ JS FIX: force vertical (Y-axis) centering inside the chat input box.
+# CSS targeting alone kept guessing the wrong wrapper, so this script finds
+# the real <textarea> in the live DOM, walks up to its actual flex parent,
+# and sets align-items via inline style — which always wins over class-based
+# CSS and can never accidentally shift things horizontally.
+# =========================================================
+components.html(
+    """
+    <script>
+    function centerChatInputVertically() {
+        const doc = window.parent.document;
+        const textareas = doc.querySelectorAll('[data-testid="stChatInput"] textarea');
+        textareas.forEach(function(ta) {
+            let node = ta.parentElement;
+            for (let i = 0; i < 5 && node; i++) {
+                const cs = window.getComputedStyle(node);
+                if (cs.display === 'flex') {
+                    node.style.setProperty('align-items', 'center', 'important');
+                }
+                node = node.parentElement;
+            }
+            ta.style.setProperty('margin-top', 'auto', 'important');
+            ta.style.setProperty('margin-bottom', 'auto', 'important');
+        });
+        const buttons = doc.querySelectorAll('[data-testid="stChatInput"] button');
+        buttons.forEach(function(btn) {
+            btn.style.setProperty('margin-top', 'auto', 'important');
+            btn.style.setProperty('margin-bottom', 'auto', 'important');
+            btn.style.setProperty('align-self', 'center', 'important');
+        });
+    }
+    centerChatInputVertically();
+    let throttled = false;
+    const observer = new MutationObserver(function() {
+        if (throttled) return;
+        throttled = true;
+        setTimeout(function() {
+            centerChatInputVertically();
+            throttled = false;
+        }, 200);
+    });
+    observer.observe(window.parent.document.body, {childList: true, subtree: true});
+    </script>
+    """,
+    height=1,
+)
