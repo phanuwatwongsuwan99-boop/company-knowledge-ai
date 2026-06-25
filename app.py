@@ -627,7 +627,7 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-    st.caption(f"USERNAME:{st.session_state['current_user']}")
+    st.caption(f"Username:{st.session_state['current_user']}")
     st.button("New chat", on_click=new_chat, use_container_width=True, type="primary")
     st.write("---")
 
@@ -646,7 +646,7 @@ with st.sidebar:
     else:
         st.caption("ยังไม่มีประวัติการแชท")
 
-    st.button("🚪 Logout", on_click=logout, use_container_width=True)
+    st.button("Logout", on_click=logout, use_container_width=True)
 
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
