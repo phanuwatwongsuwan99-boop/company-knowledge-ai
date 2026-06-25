@@ -59,7 +59,7 @@ def check_password():
         # แบ่ง 3 คอลัมน์ (เว้นซ้าย 1 ส่วน, ตรงกลาง 1.5 ส่วน, เว้นขวา 1 ส่วน)
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
-            st.markdown("<h2 style='text-align: center;'>Welcome to Oran</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center;'>Oran AI</h2>", unsafe_allow_html=True)
             st.write("") # เว้นบรรทัด
             st.text_input("Username", key="username_input")
             st.text_input("Password", type="password", key="password_input")
