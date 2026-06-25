@@ -93,12 +93,22 @@ st.markdown(
             background: var(--bg-soft);
             border-right: 1px solid var(--border);
         }}
-        [data-testid="stSidebarContent"]::-webkit-scrollbar {{ display: none; }}
         [data-testid="stSidebarContent"] {{
+            position: relative;
             scrollbar-width: none;
             height: 100vh;
             max-height: 100vh;
             overflow: hidden !important;
+        }}
+        [data-testid="stSidebarContent"]::-webkit-scrollbar {{ display: none; }}
+        /* Pin the Logout button (last button in the sidebar) to the bottom of the screen,
+           without affecting the layout/flow of anything above it */
+        [data-testid="stSidebarContent"] div[data-testid="stButton"]:last-of-type {{
+            position: absolute;
+            bottom: 16px;
+            left: 0;
+            right: 0;
+            padding: 0 1rem;
         }}
         /* Style Streamlit's native collapse control to match the dark theme */
         [data-testid="stSidebarCollapsedControl"] button,
