@@ -627,8 +627,8 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-    st.caption(f"👤 {st.session_state['current_user']}")
-    st.button("➕ New chat", on_click=new_chat, use_container_width=True, type="primary")
+    st.caption(f"USERNAME:{st.session_state['current_user']}")
+    st.button("New chat", on_click=new_chat, use_container_width=True, type="primary")
     st.write("---")
 
     st.write("**History**")
@@ -640,7 +640,7 @@ with st.sidebar:
             short_name = first_question[:25] + "..." if len(first_question) > 25 else first_question
 
             is_active = (chat_id == st.session_state.get("current_chat_id"))
-            btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
+            btn_label = f"{short_name}" if not is_active else f"{short_name}"
 
             st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
     else:
