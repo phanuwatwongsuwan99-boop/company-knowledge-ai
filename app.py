@@ -82,8 +82,11 @@ st.markdown(
             letter-spacing: -0.01em;
         }}
 
-        /* Hide default Streamlit chrome */
-        #MainMenu, footer, header {{visibility: hidden;}}
+        /* Hide default Streamlit chrome (menu + footer only — keep header so the sidebar toggle still works) */
+        #MainMenu, footer {{visibility: hidden;}}
+        [data-testid="stHeader"] {{
+            background: transparent;
+        }}
 
         /* ---------- SIDEBAR (Claude-style: dark, collapsible) ---------- */
         [data-testid="stSidebar"] {{
