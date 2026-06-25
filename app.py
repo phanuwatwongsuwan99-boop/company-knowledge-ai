@@ -9,9 +9,27 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 import os
 import glob
-import time  # 👈 เพิ่มเครื่องมือควบคุมเวลาสำหรับแอนิเมชันไดโนเสาร์
+import time
+import csv
+from datetime import datetime, timezone, timedelta
 
 st.set_page_config(page_title="Corporate AI Assistant", page_icon="🤖")
+
+# --- ฟังก์ชันแอบจดประวัติการแชท ---
+def log_chat(username, question, answer):
+    # ตั้งเวลาเป็นประเทศไทย (UTC+7)
+    tz_th = timezone(timedelta(hours=7))
+    now = datetime.now(tz_th).strftime("%Y-%m-%d %H:%M:%S")
+    
+    file_exists = os.path.isfile("chat_logs.csv")
+    
+    # เปิดไฟล์และเขียนข้อมูลต่อท้าย (ใช้ utf-8-sig เพื่อให้ Excel อ่านภาษาไทยได้ไม่เพี้ยน)
+    with open("chat_logs.csv", "a", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["วัน-เวลา", "ชื่อพนักงาน", "คำถาม", "คำตอบจาก AI"])
+        writer.writerow([now, username, question, answer])
+# -----------------------------
 
 # --- ระบบ Login ---
 def check_password():
@@ -23,7 +41,7 @@ def check_password():
             if str(st.secrets["passwords"][user]) == str(pw):
                 st.session_state["password_correct"] = True
                 st.session_state["current_user"] = user 
-                st.session_state["show_dino"] = True  # 👈 สั่งให้เปิดหน้าไดโนเสาร์วิ่งตอนเข้าสู่ระบบสำเร็จ
+                st.session_state["show_dino"] = True 
                 del st.session_state["password_input"] 
                 return
         
@@ -47,40 +65,46 @@ def check_password():
 if not check_password():
     st.stop()
 
-# --- แอนิเมชันไดโนเสาร์โหลดดิ้ง 🦖 ---
+# --- แอนิเมชันไดโนเสาร์ ---
 if st.session_state.get("show_dino", False):
     st.title("🤖 กำลังเข้าสู่ระบบ...")
-    
-    # สร้างพื้นที่ว่างสำหรับโชว์ข้อความและแถบโหลด
     dino_text = st.empty()
     progress_bar = st.progress(0)
-    
-    # ให้ไดโนเสาร์วิ่งจาก 1 ถึง 100
     for percent in range(1, 101):
-        # เคาะ spacebar ดันไดโนเสาร์ไปทางขวาตามเปอร์เซ็นต์
         spaces = "&nbsp;" * percent 
         dino_text.markdown(f"{spaces}🦖 **กำลังดึงข้อมูลองค์กร... {percent}%**")
         progress_bar.progress(percent)
-        time.sleep(0.02)  # ความเร็วในการวิ่ง (ยิ่งค่าน้อยยิ่งวิ่งเร็ว)
-        
-    # ลบแถบโหลดทิ้งเมื่อวิ่งเสร็จ
+        time.sleep(0.01)
     dino_text.empty()
     progress_bar.empty()
-    
-    # ปิดสวิตช์ไดโนเสาร์เพื่อไม่ให้มันโชว์อีก และโหลดหน้าหลัก
     st.session_state["show_dino"] = False
     st.rerun()
-# ------------------------------------
+
+# --- เมนูด้านซ้ายสำหรับดาวน์โหลดประวัติ (Sidebar) ---
+with st.sidebar:
+    st.success(f"👤 สวัสดีคุณ: **{st.session_state['current_user']}**")
+    st.write("---")
+    st.write("📊 **ส่วนสำหรับผู้ดูแลระบบ**")
+    
+    # ตรวจสอบว่ามีไฟล์ประวัติถูกสร้างขึ้นมาหรือยัง
+    if os.path.exists("chat_logs.csv"):
+        with open("chat_logs.csv", "rb") as f:
+            st.download_button(
+                label="📥 ดาวน์โหลดประวัติการแชท (CSV)",
+                data=f,
+                file_name="chat_logs.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("ยังไม่มีประวัติการแชทในระบบ")
 
 # --- หน้าแชทหลัก ---
-st.caption(f"👤 เข้าสู่ระบบโดย: {st.session_state['current_user']}")
 st.title("🤖 ผู้ช่วย AI สำหรับองค์กร")
 
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
     docs = []
     pdf_files = glob.glob("*.pdf")
-    
     if not pdf_files:
         st.error("ไม่พบไฟล์เอกสาร PDF ใด ๆ ในระบบ")
         st.stop()
@@ -124,7 +148,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if user_input := st.chat_input("พิมพ์คำถาม..."):
+if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
@@ -134,3 +158,6 @@ if user_input := st.chat_input("พิมพ์คำถาม..."):
             response = rag_chain.invoke(user_input)
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
+            
+            # 📌 สั่งให้จดประวัติลงไฟล์ทันทีที่ AI ตอบเสร็จ!
+            log_chat(st.session_state["current_user"], user_input, response)
