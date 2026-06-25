@@ -205,6 +205,7 @@ st.markdown(
             box-shadow: 0 4px 18px rgba(0,0,0,0.25);
             overflow: hidden;
             display: flex !important;
+            flex-direction: row !important;
             align-items: center !important;
         }}
         [data-testid="stChatInput"]:focus-within {{
@@ -218,7 +219,9 @@ st.markdown(
             box-shadow: none !important;
             padding: 10px 6px 10px 18px !important;
             display: flex !important;
+            flex-direction: row !important;
             align-items: center !important;
+            width: 100%;
         }}
         [data-testid="stChatInput"] textarea {{
             background: var(--surface-2) !important;
@@ -227,6 +230,7 @@ st.markdown(
             box-shadow: none !important;
             padding: 0 !important;
             margin: 0 !important;
+            flex: 1 1 auto;
         }}
         [data-testid="stChatInput"] textarea::placeholder {{
             color: var(--text-faint) !important;
@@ -236,8 +240,8 @@ st.markdown(
             background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange)) !important;
             border-radius: 50% !important;
             border: none !important;
-            align-self: center !important;
-            margin: 0 !important;
+            margin: auto 0 !important;
+            flex-shrink: 0;
         }}
         [data-testid="stChatInputSubmitButton"] svg,
         [data-testid="stChatInput"] button svg {{
