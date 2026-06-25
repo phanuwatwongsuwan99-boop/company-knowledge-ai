@@ -40,7 +40,7 @@ def logout():
     st.session_state.clear()
     st.rerun()
 
-# --- ระบบ Login ---
+# --- ระบบ Login แบบจัดกึ่งกลาง ---
 def check_password():
     def login_attempt():
         user = st.session_state["username_input"]
@@ -56,17 +56,26 @@ def check_password():
         st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        st.title("🔒 เข้าสู่ระบบ AI องค์กร")
-        st.text_input("ชื่อผู้ใช้งาน (Username)", key="username_input")
-        st.text_input("รหัสผ่าน (Password)", type="password", key="password_input")
-        st.button("เข้าสู่ระบบ", on_click=login_attempt)
+        # แบ่ง 3 คอลัมน์ (เว้นซ้าย 1 ส่วน, ตรงกลาง 1.5 ส่วน, เว้นขวา 1 ส่วน)
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col2:
+            st.markdown("<h2 style='text-align: center;'>🔒 เข้าสู่ระบบ AI องค์กร</h2>", unsafe_allow_html=True)
+            st.write("") # เว้นบรรทัด
+            st.text_input("ชื่อผู้ใช้งาน (Username)", key="username_input")
+            st.text_input("รหัสผ่าน (Password)", type="password", key="password_input")
+            st.write("") # เว้นบรรทัด
+            st.button("เข้าสู่ระบบ", on_click=login_attempt, use_container_width=True)
         return False
+        
     elif not st.session_state["password_correct"]:
-        st.title("🔒 เข้าสู่ระบบ AI องค์กร")
-        st.text_input("ชื่อผู้ใช้งาน (Username)", key="username_input")
-        st.error("ชื่อผู้ใช้งาน หรือ รหัสผ่าน ไม่ถูกต้อง! กรุณาลองใหม่")
-        st.text_input("รหัสผ่าน (Password)", type="password", key="password_input")
-        st.button("เข้าสู่ระบบ", on_click=login_attempt)
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col2:
+            st.markdown("<h2 style='text-align: center;'>🔒 เข้าสู่ระบบ AI องค์กร</h2>", unsafe_allow_html=True)
+            st.error("ชื่อผู้ใช้งาน หรือ รหัสผ่าน ไม่ถูกต้อง! กรุณาลองใหม่")
+            st.text_input("ชื่อผู้ใช้งาน (Username)", key="username_input")
+            st.text_input("รหัสผ่าน (Password)", type="password", key="password_input")
+            st.write("") # เว้นบรรทัด
+            st.button("เข้าสู่ระบบ", on_click=login_attempt, use_container_width=True)
         return False
     return True
 
@@ -106,20 +115,13 @@ if st.session_state["current_user"] in ADMIN_USERS:
     if os.path.exists("chat_logs.csv"):
         df = pd.read_csv("chat_logs.csv")
         
-        # 📌 ---------------------------------------------------------
-        # ระบบตรวจจับและเตือนความจำก่อนไฟล์ถูกเคลียร์ (ภายใน 7 วัน)
-        # ---------------------------------------------------------
         try:
-            # ดึงเวลาของแถวแรกสุดในไฟล์ประวัติ
             first_log_time_str = df.iloc[0]["วัน-เวลา"]
             first_log_time = datetime.strptime(first_log_time_str, "%Y-%m-%d %H:%M:%S")
-            
-            # คำนวณหาอายุของไฟล์ว่าอยู่มานานกี่วันแล้ว
             tz_th = timezone(timedelta(hours=7))
             current_time = datetime.now(tz_th).replace(tzinfo=None)
             file_age_days = (current_time - first_log_time).days
             
-            # หากไฟล์มีอายุมากกว่าหรือเท่ากับ 5 วัน ให้เปิดสัญญาณเตือนสีส้มทันที
             if file_age_days >= 5:
                 st.warning(
                     f"⚠️ **แจ้งเตือนผู้ดูแลระบบ:** ไฟล์ประวัติการแชทนี้ถูกบันทึกสะสมมาเป็นเวลา **{file_age_days} วัน** แล้ว "
@@ -129,7 +131,6 @@ if st.session_state["current_user"] in ADMIN_USERS:
                 st.write("")
         except:
             pass
-        # ---------------------------------------------------------
 
         with open("chat_logs.csv", "rb") as f:
             st.download_button(
@@ -257,7 +258,7 @@ NOT_FOUND_MSG = "ไม่พบข้อมูลในเอกสารขอ
 system_prompt = (
     "คุณคือผู้ช่วย AI อัจฉริยะขององค์กร จงใช้ข้อมูลจาก Context ด้านล่างเพื่อตอบคำถาม\n\n"
     "คำแนะนำเพิ่มเติมเพื่อให้คุณฉลาดขึ้น:\n"
-    "1. หากผู้ใช้พิมพ์คำถามมาสั้นๆ หรือพิมพ์แค่คีย์เวิร์ด (เช่น 'วันลากิจ', 'เบิกเงิน') ให้คุณตีความว่าผู้ใชอยกรู้รายละเอียดทั้งหมดเกี่ยวกับเรื่องนั้น และช่วยสรุปข้อมูลทั้งหมดที่คุณเจอใน Context มาอธิบายให้ครบถ้วนในรูปแบบที่อ่านง่าย\n"
+    "1. หากผู้ใช้พิมพ์คำถามมาสั้นๆ หรือพิมพ์แค่คีย์เวิร์ด (เช่น 'วันลากิจ', 'เบิกเงิน') ให้คุณตีความว่าผู้ใช้อยากรู้รายละเอียดทั้งหมดเกี่ยวกับเรื่องนั้น และช่วยสรุปข้อมูลทั้งหมดที่คุณเจอใน Context มาอธิบายให้ครบถ้วนในรูปแบบที่อ่านง่าย\n"
     "2. พยายามตอบให้ตรงประเด็น เป็นมิตร และใช้การจัดหน้า (เช่น Bullet points) ถ้าข้อมูลมีหลายข้อ\n"
     f"3. ถ้าข้อมูลใน Context ไม่มีเรื่องที่ถามเลยจริงๆ ให้ตอบคำว่า '{NOT_FOUND_MSG}' เท่านั้น ห้ามเดาเอาเองเด็ดขาด\n\n"
     "Context:\n{context}"
