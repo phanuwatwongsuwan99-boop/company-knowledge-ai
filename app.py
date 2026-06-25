@@ -17,6 +17,7 @@ import os
 import glob
 import time
 import csv
+import base64
 import pandas as pd
 from collections import Counter
 from datetime import datetime, timezone, timedelta
@@ -75,6 +76,20 @@ def switch_chat(selected_chat_id):
     st.session_state["current_chat_id"] = selected_chat_id
     st.session_state.messages = []
 
+# --- ฟังก์ชันแปลงโลโก้เป็น base64 สำหรับแสดงผลหน้า Login ---
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "logo.png")
+
+@st.cache_data
+def get_logo_b64():
+    try:
+        with open(LOGO_PATH, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+
+LOGO_B64 = get_logo_b64()
+LOGO_IMG = f"data:image/png;base64,{LOGO_B64}" if LOGO_B64 else ""
+
 # --- ระบบ Login แบบจัดกึ่งกลาง ---
 def check_password():
     def login_attempt():
@@ -93,6 +108,11 @@ def check_password():
     if "password_correct" not in st.session_state:
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
+            if LOGO_IMG:
+                st.markdown(
+                    f"<div style='text-align: center;'><img src='{LOGO_IMG}' style='width:90px; height:90px; object-fit:contain;' /></div>",
+                    unsafe_allow_html=True
+                )
             st.markdown("<h2 style='text-align: center;'>Oran AI</h2>", unsafe_allow_html=True)
             st.write("") 
             st.text_input("Username", key="username_input")
@@ -104,6 +124,11 @@ def check_password():
     elif not st.session_state["password_correct"]:
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
+            if LOGO_IMG:
+                st.markdown(
+                    f"<div style='text-align: center;'><img src='{LOGO_IMG}' style='width:90px; height:90px; object-fit:contain;' /></div>",
+                    unsafe_allow_html=True
+                )
             st.markdown("<h2 style='text-align: center;'>Oran AI</h2>", unsafe_allow_html=True)
             st.error("ชื่อผู้ใช้งาน หรือ รหัสผ่าน ไม่ถูกต้อง! กรุณาลองใหม่")
             st.text_input("Username", key="username_input")
