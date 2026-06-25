@@ -90,7 +90,7 @@ ADMIN_USERS = ["boss", "admin"]
 if st.session_state["current_user"] in ADMIN_USERS:
     
     with st.sidebar:
-        st.success(f"👑 สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
+        st.success(f"สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
         st.write("---")
         st.button("ออกจากระบบ", on_click=logout, use_container_width=True)
         st.write("---")
