@@ -20,7 +20,7 @@ import csv
 import pandas as pd
 from collections import Counter
 from datetime import datetime, timezone, timedelta
-import uuid # 👈 นำเข้าเครื่องมือสร้างรหัสห้องแชทอัตโนมัติ
+import uuid
 
 st.set_page_config(page_title="Corporate AI System", page_icon="🤖", layout="wide")
 
@@ -30,11 +30,9 @@ def log_chat(chat_id, username, question, answer, status):
     now = datetime.now(tz_th).strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile("chat_logs.csv")
     
-    # หากไฟล์มีอยู่แล้ว แต่เป็นเวอร์ชันเก่าที่ไม่มี Chat ID (ให้ระบบข้ามไปเขียนต่อได้เลย)
     with open("chat_logs.csv", "a", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         if not file_exists:
-            # 📌 เพิ่มคอลัมน์ Chat ID เข้าไปในระบบฐานข้อมูล
             writer.writerow(["Chat ID", "วัน-เวลา", "ชื่อพนักงาน", "คำถาม", "คำตอบจาก AI", "สถานะการตอบ"])
         writer.writerow([chat_id, now, username, question, answer, status])
 
@@ -45,12 +43,12 @@ def logout():
 
 # --- ระบบสร้างและสลับห้องแชท ---
 def new_chat():
-    st.session_state["current_chat_id"] = str(uuid.uuid4().hex[:8]) # สร้างรหัสห้องใหม่ 8 หลัก
+    st.session_state["current_chat_id"] = str(uuid.uuid4().hex[:8])
     st.session_state.messages = []
 
 def switch_chat(selected_chat_id):
     st.session_state["current_chat_id"] = selected_chat_id
-    st.session_state.messages = [] # เคลียร์หน้าจอเพื่อรอโหลดประวัติห้องที่เลือก
+    st.session_state.messages = [] 
 
 # --- ระบบ Login แบบจัดกึ่งกลาง ---
 def check_password():
@@ -107,7 +105,6 @@ if st.session_state.get("show_dino", False):
     progress_bar.empty()
     st.session_state["show_dino"] = False
     
-    # 📌 เมื่อล็อคอินเสร็จ สร้างรหัสห้องแชทแรกเตรียมไว้ให้เลย
     if "current_chat_id" not in st.session_state:
         st.session_state["current_chat_id"] = str(uuid.uuid4().hex[:8])
         
@@ -122,14 +119,15 @@ if st.session_state["current_user"] in ADMIN_USERS:
     with st.sidebar:
         st.success(f"ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
         st.write("---")
-        st.button("ออกจากระบบ", on_click=logout, use_container_width=True)
-        st.write("---")
+        # ใช้ container พิเศษเพื่อดันปุ่ม Logout ลงล่างสุด
+        st.markdown('<div style="flex-grow: 1;"></div>', unsafe_allow_html=True)
+        for _ in range(15): st.write("") # ดันเว้นระยะบรรทัด
+        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
 
-    st.title("ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
+    st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
     st.write("---")
 
     if os.path.exists("chat_logs.csv"):
-        # ใช้ error_bad_lines=False เพื่อป้องกันบั๊กหากไฟล์เก่าผสมกับไฟล์ใหม่
         try:
             df = pd.read_csv("chat_logs.csv", on_bad_lines='skip')
         except:
@@ -160,7 +158,6 @@ if st.session_state["current_user"] in ADMIN_USERS:
                     mime="text/csv"
                 )
             
-            # ตรวจสอบว่ามีคอลัมน์สถานะการตอบไหม (เผื่อไฟล์เก่า)
             if "สถานะการตอบ" in df.columns:
                 total_questions = len(df)
                 unanswered_questions = len(df[df["สถานะการตอบ"] == "ตอบไม่ได้"])
@@ -216,12 +213,11 @@ if st.session_state["current_user"] in ADMIN_USERS:
 st.set_option('client.showSidebarNavigation', False)
 
 # 📌 ---------------------------------------------------------
-# ระบบแถบเมนูด้านซ้ายสำหรับพนักงาน (แสดงห้องแชทย้อนหลัง)
+# ระบบแถบเมนูด้านซ้ายสำหรับพนักงาน (แสดงห้องแชทย้อนหลัง + ปุ่ม Logout ด้านล่างสุด)
 # ---------------------------------------------------------
 my_history_df = pd.DataFrame()
 if os.path.exists("chat_logs.csv"):
     try:
-        # อ่านไฟล์และกรองเฉพาะประวัติของคนนี้
         df_history = pd.read_csv("chat_logs.csv", on_bad_lines='skip')
         if "ชื่อพนักงาน" in df_history.columns and "Chat ID" in df_history.columns:
             my_history_df = df_history[df_history["ชื่อพนักงาน"] == st.session_state["current_user"]]
@@ -229,40 +225,37 @@ if os.path.exists("chat_logs.csv"):
         pass
 
 with st.sidebar:
-    st.success(f"Username: **{st.session_state['current_user']}**")
+    st.success(f"👤 บัญชี: **{st.session_state['current_user']}**")
     
-    # ปุ่มเปิดห้องแชทใหม่
-    st.button("New chat", on_click=new_chat, use_container_width=True, type="primary")
+    st.button("➕ New chat", on_click=new_chat, use_container_width=True, type="primary")
     st.write("---")
     
-    st.write("**History**")
-    if not my_history_df.empty:
-        # จัดกลุ่มตาม Chat ID เพื่อเอาคำถามแรกมาเป็นชื่อปุ่ม
-        chat_groups = my_history_df.groupby("Chat ID", sort=False)
-        
-        # วนลูปสร้างปุ่มประวัติแชท (เอาห้องล่าสุดขึ้นก่อน)
-        for chat_id, group in reversed(list(chat_groups)):
-            first_question = str(group.iloc[0]["คำถาม"])
-            # ตัดให้ชื่อห้องไม่ยาวเกินไป
-            short_name = first_question[:25] + "..." if len(first_question) > 25 else first_question
-            
-            # ทำสัญลักษณ์ให้รู้ว่าตอนนี้อยู่ห้องไหน
-            is_active = (chat_id == st.session_state.get("current_chat_id"))
-            btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
-            
-            # พอกดปุ่ม ให้เรียกใช้ฟังก์ชันสลับห้อง
-            st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
-    else:
-        st.caption("ยังไม่มีประวัติการแชท")
+    st.write("📝 **History**")
+    
+    # 📌 สร้างคอนเทนเนอร์สำหรับใส่ประวัติแชท เพื่อให้มันเลื่อนขึ้นลงได้โดยไม่ดันปุ่ม Logout
+    chat_history_container = st.container(height=400, border=False)
+    
+    with chat_history_container:
+        if not my_history_df.empty:
+            chat_groups = my_history_df.groupby("Chat ID", sort=False)
+            for chat_id, group in reversed(list(chat_groups)):
+                first_question = str(group.iloc[0]["คำถาม"])
+                short_name = first_question[:25] + "..." if len(first_question) > 25 else first_question
+                
+                is_active = (chat_id == st.session_state.get("current_chat_id"))
+                btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
+                
+                st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
+        else:
+            st.caption("ยังไม่มีประวัติการแชท")
+    
+    # 📌 ดันปุ่ม Logout ให้ไปอยู่ล่างสุดของแถบเมนูด้านซ้าย
+    st.markdown('<div style="flex-grow: 1;"></div>', unsafe_allow_html=True)
+    st.write("---")
+    st.button("🚪 Logout", on_click=logout, use_container_width=True)
 # ---------------------------------------------------------
 
-header_col1, header_col2 = st.columns([8, 2])
-with header_col1:
-    st.title("Oran ผู้ช่วย AI สำหรับองค์กร")
-with header_col2:
-    st.write("") 
-    st.button("Logout", on_click=logout, use_container_width=True)
-
+st.title("Oran ผู้ช่วย AI สำหรับองค์กร")
 st.write("---")
 
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
@@ -337,25 +330,21 @@ rag_chain = (
     | StrOutputParser()
 )
 
-# 📌 โหลดข้อความประวัติแชท เฉพาะของ "ห้องแชทปัจจุบัน (current_chat_id)"
 if "messages" not in st.session_state or not st.session_state.messages:
     st.session_state.messages = []
     
     if not my_history_df.empty and "current_chat_id" in st.session_state:
-        # กรองเอาแค่ประวัติที่ Chat ID ตรงกับห้องปัจจุบัน
         current_chat_history = my_history_df[my_history_df["Chat ID"] == st.session_state["current_chat_id"]]
         
         for index, row in current_chat_history.iterrows():
             st.session_state.messages.append({"role": "user", "content": str(row["คำถาม"])})
             st.session_state.messages.append({"role": "assistant", "content": str(row["คำตอบจาก AI"])})
 
-# โชว์ข้อความแชทบนหน้าจอ
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร... (พิมพ์คำสั้นๆ ก็ได้นะ)"):
-    # ป้องกันกรณีเข้ามาครั้งแรกแล้วยังไม่มีรหัสห้อง
     if "current_chat_id" not in st.session_state:
         st.session_state["current_chat_id"] = str(uuid.uuid4().hex[:8])
 
@@ -373,5 +362,7 @@ if user_input := st.chat_input("พิมพ์คำถามเกี่ยว
             if NOT_FOUND_MSG in response:
                 status = "ตอบไม่ได้"
                 
-            # ส่ง Chat ID ลงไปจดบันทึกด้วย
             log_chat(st.session_state["current_chat_id"], st.session_state["current_user"], user_input, response, status)
+            
+            # บังคับรีเฟรช 1 ครั้งเพื่อให้อัปเดตชื่อห้องแชทในเมนูด้านซ้าย
+            st.rerun()
