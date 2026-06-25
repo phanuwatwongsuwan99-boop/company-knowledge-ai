@@ -64,7 +64,7 @@ def check_password():
             st.text_input("Username", key="username_input")
             st.text_input("Password", type="password", key="password_input")
             st.write("") # เว้นบรรทัด
-            st.button("เข้าสู่ระบบ", on_click=login_attempt, use_container_width=True)
+            st.button("Login", on_click=login_attempt, use_container_width=True)
         return False
         
     elif not st.session_state["password_correct"]:
