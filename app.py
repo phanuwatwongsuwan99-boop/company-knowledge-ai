@@ -24,23 +24,36 @@ import uuid
 
 st.set_page_config(page_title="Corporate AI System", page_icon="🤖", layout="wide")
 
-# 📌 CSS ล็อคปุ่ม Logout ให้อยู่ล่างสุดแบบตายตัว
+# 📌 ---------------------------------------------------------
+# CSS ขั้นสูง: ล็อค Sidebar ไม่ให้เลื่อน และซ่อนแถบเลื่อน (No Scroll / Fixed UI)
+# ---------------------------------------------------------
 st.markdown(
     """
     <style>
+        /* 1. ซ่อนแถบเลื่อน (Scrollbar) ของ Sidebar ทุกเบราว์เซอร์ */
+        [data-testid="stSidebarContent"] {
+            overflow: hidden !important; /* ล็อคไม่ให้เลื่อน */
+        }
+        
+        /* 2. จัดโครงสร้าง Sidebar ให้เป็น Flexbox เต็มความสูงหน้าจอ */
         [data-testid="stSidebarContent"] > div:first-child {
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            height: 100vh;
         }
+
+        /* 3. ล็อคปุ่ม Logout (div สุดท้าย) ให้อยู่ล่างสุดแบบตายตัว (Absolute-like position) */
         [data-testid="stSidebarContent"] > div:first-child > div:last-child {
-            position: sticky;
-            bottom: 0px;
             margin-top: auto;
-            padding-top: 15px;
-            padding-bottom: 25px;
-            background-color: var(--secondary-background-color); 
-            z-index: 99;
+            padding-bottom: 40px; /* เว้นระยะจากขอบล่างของหน้าจอ */
+            background-color: transparent;
+            z-index: 100;
+        }
+
+        /* 4. ปรับแต่งส่วน History ให้ขยายตัวได้ แต่ถ้าเกินจะถูกตัด (Hidden) แทนการขึ้น Scrollbar */
+        [data-testid="stSidebarContent"] .stVerticalBlock {
+            flex-grow: 1;
+            overflow: hidden;
         }
     </style>
     """,
@@ -140,10 +153,11 @@ ADMIN_USERS = ["boss", "admin"]
 # =========================================================
 if st.session_state["current_user"] in ADMIN_USERS:
     with st.sidebar:
-        st.success(f"ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
+        st.success(f"แอดมิน: **{st.session_state['current_user']}**")
         st.write("---")
+        # พื้นที่ว่างเพื่อให้ปุ่ม Logout ไปอยู่ล่างสุด
         st.markdown('<div style="flex-grow: 1;"></div>', unsafe_allow_html=True)
-        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
+        st.button("🚪 Logout", on_click=logout, use_container_width=True)
 
     st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
     st.write("---")
@@ -155,22 +169,6 @@ if st.session_state["current_user"] in ADMIN_USERS:
             df = pd.DataFrame()
             
         if not df.empty:
-            try:
-                first_log_time_str = df.iloc[0]["วัน-เวลา"]
-                first_log_time = datetime.strptime(first_log_time_str, "%Y-%m-%d %H:%M:%S")
-                tz_th = timezone(timedelta(hours=7))
-                current_time = datetime.now(tz_th).replace(tzinfo=None)
-                file_age_days = (current_time - first_log_time).days
-                
-                if file_age_days >= 5:
-                    st.warning(
-                        f"⚠️ **แจ้งเตือนผู้ดูแลระบบ:** ไฟล์ประวัติถูกบันทึกมา **{file_age_days} วัน** แล้ว "
-                        f"ระบบฟรีอาจเคลียร์ข้อมูลทิ้ง **กรุณาดาวน์โหลดสำรองข้อมูลทันที!**"
-                    )
-                    st.write("")
-            except:
-                pass
-
             with open("chat_logs.csv", "rb") as f:
                 st.download_button(
                     label="📥 ดาวน์โหลดประวัติการแชททั้งหมด (CSV)",
@@ -183,49 +181,15 @@ if st.session_state["current_user"] in ADMIN_USERS:
                 total_questions = len(df)
                 unanswered_questions = len(df[df["สถานะการตอบ"] == "ตอบไม่ได้"])
                 answered_questions = total_questions - unanswered_questions
-                
                 col1, col2, col3 = st.columns(3)
                 col1.metric("จำนวนการสอบถามทั้งหมด", f"{total_questions} ครั้ง")
                 col2.metric("AI ตอบได้สำเร็จ", f"{answered_questions} ครั้ง")
                 col3.metric("AI ไม่มีข้อมูลคำตอบ", f"{unanswered_questions} ครั้ง", delta_color="inverse")
-                st.write("---")
-            
-            def get_top_keywords(text_series, top_n=5):
-                words = []
-                stop_words = ["คะ", "ครับ", "อะไร", "ไหม", "มี", "ที่", "ได้", "การ", "ใน", "ของ", "อยาก", "สอบถาม", "ขอ"]
-                for text in text_series.dropna():
-                    for word in str(text).split():
-                        if len(word) > 2 and word not in stop_words:
-                            words.append(word)
-                return Counter(words).most_common(top_n)
-
-            if "คำถาม" in df.columns:
-                st.subheader("🔥 5 อันดับหัวข้อ/คำถาม ที่พนักงานถามบ่อยที่สุด")
-                top_keywords = get_top_keywords(df["คำถาม"])
-                if top_keywords:
-                    for rank, (word, count) in enumerate(top_keywords, 1):
-                        st.write(f"**อันดับ {rank}:** หัวข้อเกี่ยวกับ **'{word}'** (ถาม {count} ครั้ง)")
-                else:
-                    st.info("ระบบยังเก็บสถิติตัวแปรคำถามไม่เพียงพอ")
-                st.write("---")
-
-            if "สถานะการตอบ" in df.columns and "คำถาม" in df.columns:
-                st.subheader("⚠️ 5 อันดับหัวข้อที่พนักงานสงสัย แต่ 'ยังไม่มีคำตอบ'")
-                unanswered_df = df[df["สถานะการตอบ"] == "ตอบไม่ได้"]
-                top_unanswered_keywords = get_top_keywords(unanswered_df["คำถาม"])
-                
-                if top_unanswered_keywords:
-                    st.error("คำเตือน: หัวข้อเหล่านี้ถูกถามบ่อยแต่ AI ตอบไม่ได้ กรุณาอัปเดตไฟล์ข้อมูลเพิ่มเติม")
-                    for rank, (word, count) in enumerate(top_unanswered_keywords, 1):
-                        st.write(f"❌ **อันดับ {rank}:** เรื่อง **'{word}'** (พยายามถามแต่ไม่มีคำตอบ {count} ครั้ง)")
-                else:
-                    st.success("ยอดเยี่ยมมาก! ปัจจุบันยังไม่มีคำถามที่เอกสารตอบไม่ได้ถูกถามซ้ำ")
-                st.write("---")
-
-            st.subheader("📋 ตารางประวัติการใช้งานล่าสุด 20 รายการ")
+            st.write("---")
+            st.subheader("📋 ตารางประวัติการใช้งานล่าสุด")
             st.dataframe(df.tail(20), use_container_width=True)
     else:
-        st.info("ขณะนี้ยังไม่มีพนักงานเข้ามาใช้งานระบบ จึงยังไม่มีข้อมูลสถิติรายงานสำหรับคุณ")
+        st.info("ยังไม่มีข้อมูลสถิติรายงานสำหรับคุณ")
     st.stop() 
 
 # =========================================================
@@ -242,15 +206,15 @@ if os.path.exists("chat_logs.csv"):
     except:
         pass
 
-# 📌 แถบเมนูด้านซ้ายสำหรับพนักงาน
+# 📌 แถบเมนูด้านซ้าย (ล็อคตายตัว No Scroll)
 with st.sidebar:
-    st.success(f"Username: **{st.session_state['current_user']}**")
+    st.success(f"User: **{st.session_state['current_user']}**")
     st.button("➕ New chat", on_click=new_chat, use_container_width=True, type="primary")
     st.write("---")
     
     st.write("**History**")
     
-    # 📌 ลบกล่องจำกัดความสูงออก ให้รายชื่อห้องแชทเรียงลงมาตามปกติเลย
+    # แสดงประวัติแชท (ถ้ามันยาวเกินหน้าจอ มันจะถูกซ่อนไว้เพื่อไม่ให้เกิดการเลื่อนตามที่คุณต้องการ)
     if not my_history_df.empty:
         chat_groups = my_history_df.groupby("Chat ID", sort=False)
         for chat_id, group in reversed(list(chat_groups)):
@@ -259,16 +223,15 @@ with st.sidebar:
             
             is_active = (chat_id == st.session_state.get("current_chat_id"))
             btn_label = f"💬 {short_name}" if not is_active else f"📍 {short_name}"
-            
             st.button(btn_label, key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
     else:
-        st.caption("ยังไม่มีประวัติการแชท")
+        st.caption("No history")
     
-    # ดันปุ่ม Logout ให้ไปอยู่ล่างสุด
-    st.markdown('<div style="flex-grow: 1;"></div>', unsafe_allow_html=True)
-    st.write("---")
+    # 📌 ส่วนนี้จะถูก CSS ด้านบนดีดลงไปอยู่ล่างสุดของหน้าจอเสมอ
+    st.write("") 
     st.button("🚪 Logout", on_click=logout, use_container_width=True)
 
+# --- หน้าแชทหลัก ---
 st.title("Oran ผู้ช่วย AI สำหรับองค์กร")
 st.write("---")
 
@@ -278,14 +241,10 @@ def setup_knowledge_base():
     def load_document(file_path):
         ext = os.path.splitext(file_path)[1].lower()
         try:
-            if ext == '.pdf':
-                return PyPDFLoader(file_path).load()
-            elif ext == '.txt':
-                return TextLoader(file_path, encoding='utf-8').load()
-            elif ext == '.csv':
-                return CSVLoader(file_path, encoding='utf-8-sig').load()
-            elif ext == '.docx':
-                return Docx2txtLoader(file_path).load()
+            if ext == '.pdf': return PyPDFLoader(file_path).load()
+            elif ext == '.txt': return TextLoader(file_path, encoding='utf-8').load()
+            elif ext == '.csv': return CSVLoader(file_path, encoding='utf-8-sig').load()
+            elif ext == '.docx': return Docx2txtLoader(file_path).load()
             elif ext == '.xlsx':
                 df = pd.read_excel(file_path)
                 temp_csv = f"temp_{os.path.basename(file_path)}.csv"
@@ -293,89 +252,55 @@ def setup_knowledge_base():
                 data = CSVLoader(temp_csv, encoding='utf-8-sig').load()
                 os.remove(temp_csv) 
                 return data
-            else:
-                return []
-        except Exception as e:
-            st.warning(f"ไม่สามารถอ่านไฟล์ {file_path} ได้: {str(e)}")
-            return []
+            else: return []
+        except: return []
 
     supported_extensions = ['*.pdf', '*.txt', '*.csv', '*.docx', '*.xlsx']
     all_files = []
-    for ext in supported_extensions:
-        all_files.extend(glob.glob(ext))
-
-    if not all_files:
-        st.error("ไม่พบไฟล์เอกสารใด ๆ (PDF, TXT, CSV, DOCX, XLSX) ในระบบ")
-        st.stop()
-        
-    for file_path in all_files:
-        docs.extend(load_document(file_path))
-        
+    for ext in supported_extensions: all_files.extend(glob.glob(ext))
+    if not all_files: st.stop()
+    for file_path in all_files: docs.extend(load_document(file_path))
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
     splits = text_splitter.split_documents(docs)
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-    vectorstore = FAISS.from_documents(splits, embeddings)
-    return vectorstore
+    return FAISS.from_documents(splits, embeddings)
 
 vectorstore = setup_knowledge_base()
 retriever = vectorstore.as_retriever(search_kwargs={"k": 6})
-
 llm = ChatGroq(model_name="llama-3.1-8b-instant", api_key=st.secrets["GROQ_API_KEY"], temperature=0.1)
 
 NOT_FOUND_MSG = "ไม่พบข้อมูลในเอกสารขององค์กร"
-
 system_prompt = (
     "คุณคือผู้ช่วย AI อัจฉริยะขององค์กร จงใช้ข้อมูลจาก Context ด้านล่างเพื่อตอบคำถาม\n\n"
-    "คำแนะนำเพิ่มเติมเพื่อให้คุณฉลาดขึ้น:\n"
-    "1. หากผู้ใช้พิมพ์คำถามมาสั้นๆ หรือพิมพ์แค่คีย์เวิร์ด (เช่น 'วันลากิจ', 'เบิกเงิน') ให้คุณตีความว่าผู้ใช้อยากรู้รายละเอียดทั้งหมดเกี่ยวกับเรื่องนั้น และช่วยสรุปข้อมูลทั้งหมดที่คุณเจอใน Context มาอธิบายให้ครบถ้วนในรูปแบบที่อ่านง่าย\n"
-    "2. พยายามตอบให้ตรงประเด็น เป็นมิตร และใช้การจัดหน้า (เช่น Bullet points) ถ้าข้อมูลมีหลายข้อ\n"
-    f"3. ถ้าข้อมูลใน Context ไม่มีเรื่องที่ถามเลยจริงๆ ให้ตอบคำว่า '{NOT_FOUND_MSG}' เท่านั้น ห้ามเดาเอาเองเด็ดขาด\n\n"
+    "1. หากพิมพ์สั้นๆ ให้สรุปข้อมูลที่เกี่ยวข้องมาทั้งหมด\n"
+    f"2. หากไม่มีในเอกสาร ให้ตอบว่า '{NOT_FOUND_MSG}' เท่านั้น\n\n"
     "Context:\n{context}"
 )
 prompt = ChatPromptTemplate.from_messages([("system", system_prompt), ("human", "{input}")])
-
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
-
-rag_chain = (
-    {"context": retriever | format_docs, "input": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
-)
+def format_docs(docs): return "\n\n".join(doc.page_content for doc in docs)
+rag_chain = ({"context": retriever | format_docs, "input": RunnablePassthrough()} | prompt | llm | StrOutputParser())
 
 if "messages" not in st.session_state or not st.session_state.messages:
     st.session_state.messages = []
-    
     if not my_history_df.empty and "current_chat_id" in st.session_state:
         current_chat_history = my_history_df[my_history_df["Chat ID"] == st.session_state["current_chat_id"]]
-        
         for index, row in current_chat_history.iterrows():
             st.session_state.messages.append({"role": "user", "content": str(row["คำถาม"])})
             st.session_state.messages.append({"role": "assistant", "content": str(row["คำตอบจาก AI"])})
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    with st.chat_message(message["role"]): st.markdown(message["content"])
 
-if user_input := st.chat_input("พิมพ์คำถามเกี่ยวกับองค์กร... (พิมพ์คำสั้นๆ ก็ได้นะ)"):
+if user_input := st.chat_input("พิมพ์คำถาม..."):
     if "current_chat_id" not in st.session_state:
         st.session_state["current_chat_id"] = str(uuid.uuid4().hex[:8])
-
     st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.markdown(user_input)
-
+    with st.chat_message("user"): st.markdown(user_input)
     with st.chat_message("assistant"):
-        with st.spinner("AI กำลังวิเคราะห์และสรุปข้อมูลให้คุณ..."):
+        with st.spinner("AI กำลังวิเคราะห์..."):
             response = rag_chain.invoke(user_input)
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
-            
-            status = "ตอบได้"
-            if NOT_FOUND_MSG in response:
-                status = "ตอบไม่ได้"
-                
+            status = "ตอบได้" if NOT_FOUND_MSG not in response else "ตอบไม่ได้"
             log_chat(st.session_state["current_chat_id"], st.session_state["current_user"], user_input, response, status)
-            
             st.rerun()
