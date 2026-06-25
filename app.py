@@ -131,48 +131,19 @@ st.markdown(
             letter-spacing: -0.01em;
         }}
 
-        /* Collapsed-sidebar floating brand mark (top-left of main page) */
-        .brand-float {{
-            position: fixed;
-            top: 14px;
-            left: 18px;
-            z-index: 999;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }}
-        /* Hide the floating mark while the sidebar is expanded (the sidebar already shows the logo) */
-        [data-testid="stSidebar"][aria-expanded="true"] ~ section .brand-float {{
-            display: none;
-        }}
-        .brand-float img {{
-            width: 26px;
-            height: 26px;
-            object-fit: contain;
-            border-radius: 7px;
-        }}
-        .brand-float .brand-name {{
-            font-family: 'Outfit', sans-serif;
-            font-weight: 700;
-            font-size: 15px;
-            color: var(--text-dim);
-        }}
-
         /* ---------- BUTTONS ---------- */
         .stButton > button {{
-            background: transparent;
-            color: var(--text-dim);
-            border: 1px solid transparent;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             font-weight: 500;
-            text-align: left;
-            justify-content: flex-start;
             transition: all 0.12s ease;
         }}
         .stButton > button:hover {{
             background: var(--surface-hover);
             color: var(--text);
-            border-color: var(--border);
+            border-color: var(--accent-orange);
         }}
         /* Primary buttons (New chat) get the brand gradient */
         .stButton > button[kind="primary"] {{
@@ -180,17 +151,12 @@ st.markdown(
             color: #1A1300;
             border: none;
             font-weight: 600;
-            justify-content: center;
             box-shadow: 0 4px 16px rgba(255, 154, 60, 0.2);
         }}
         .stButton > button[kind="primary"]:hover {{
             color: #1A1300;
             filter: brightness(1.08);
             box-shadow: 0 6px 22px rgba(255, 154, 60, 0.35);
-        }}
-        /* Logout button: quiet, just a hover hint of danger-less emphasis */
-        .stSidebar .stButton > button {{
-            font-size: 14px;
         }}
 
         /* ---------- TEXT INPUTS ---------- */
@@ -492,16 +458,6 @@ if st.session_state["current_user"] in ADMIN_USERS:
         st.write("---")
         st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
 
-    st.markdown(
-        f"""
-        <div class="brand-float">
-            <img src="{LOGO_IMG}" alt="Oran AI" />
-            <span class="brand-name">Oran AI</span>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
     st.title("📊 ระบบรายงานข้อมูลสำหรับผู้ดูแลระบบ (Admin Dashboard)")
     st.write("---")
 
@@ -629,17 +585,6 @@ with st.sidebar:
         st.caption("ยังไม่มีประวัติการแชท")
 
     st.button("🚪 Logout", on_click=logout, use_container_width=True)
-
-# Floating brand mark — visible at top-left even when the sidebar is collapsed
-st.markdown(
-    f"""
-    <div class="brand-float">
-        <img src="{LOGO_IMG}" alt="Oran AI" />
-        <span class="brand-name">Oran AI</span>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
