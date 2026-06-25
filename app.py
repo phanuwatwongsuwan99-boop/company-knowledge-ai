@@ -266,18 +266,6 @@ st.markdown(
             margin-bottom: 28px;
             text-align: center;
         }}
-        .login-card {{
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 32px 30px 26px 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-        }}
-        .login-card label p {{
-            color: var(--text-dim) !important;
-            font-size: 13px !important;
-            font-weight: 500 !important;
-        }}
 
         /* Admin badge accent */
         .admin-pill {{
@@ -380,25 +368,21 @@ def check_password():
         col1, col2, col3 = st.columns([1, 1.3, 1])
         with col2:
             render_login_header()
-            st.markdown('<div class="login-card">', unsafe_allow_html=True)
             st.text_input("ชื่อผู้ใช้งาน", key="username_input", placeholder="Username")
             st.text_input("รหัสผ่าน", type="password", key="password_input", placeholder="Password")
             st.write("")
             st.button("เข้าสู่ระบบ", on_click=login_attempt, use_container_width=True, type="primary")
-            st.markdown('</div>', unsafe_allow_html=True)
         return False
 
     elif not st.session_state["password_correct"]:
         col1, col2, col3 = st.columns([1, 1.3, 1])
         with col2:
             render_login_header()
-            st.markdown('<div class="login-card">', unsafe_allow_html=True)
             st.error("ชื่อผู้ใช้งาน หรือ รหัสผ่าน ไม่ถูกต้อง! กรุณาลองใหม่")
             st.text_input("ชื่อผู้ใช้งาน", key="username_input", placeholder="Username")
             st.text_input("รหัสผ่าน", type="password", key="password_input", placeholder="Password")
             st.write("")
             st.button("เข้าสู่ระบบ", on_click=login_attempt, use_container_width=True, type="primary")
-            st.markdown('</div>', unsafe_allow_html=True)
         return False
     return True
 
