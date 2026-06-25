@@ -15,21 +15,17 @@ from datetime import datetime, timezone, timedelta
 
 st.set_page_config(page_title="Corporate AI Assistant", page_icon="🤖")
 
-# --- ฟังก์ชันแอบจดประวัติการแชท ---
+# --- ฟังก์ชันบันทึกประวัติการแชทลงไฟล์หลังบ้าน ---
 def log_chat(username, question, answer):
-    # ตั้งเวลาเป็นประเทศไทย (UTC+7)
     tz_th = timezone(timedelta(hours=7))
     now = datetime.now(tz_th).strftime("%Y-%m-%d %H:%M:%S")
-    
     file_exists = os.path.isfile("chat_logs.csv")
     
-    # เปิดไฟล์และเขียนข้อมูลต่อท้าย (ใช้ utf-8-sig เพื่อให้ Excel อ่านภาษาไทยได้ไม่เพี้ยน)
     with open("chat_logs.csv", "a", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(["วัน-เวลา", "ชื่อพนักงาน", "คำถาม", "คำตอบจาก AI"])
         writer.writerow([now, username, question, answer])
-# -----------------------------
 
 # --- ระบบ Login ---
 def check_password():
@@ -80,26 +76,36 @@ if st.session_state.get("show_dino", False):
     st.session_state["show_dino"] = False
     st.rerun()
 
-# --- เมนูด้านซ้ายสำหรับดาวน์โหลดประวัติ (Sidebar) ---
-with st.sidebar:
-    st.success(f"👤 สวัสดีคุณ: **{st.session_state['current_user']}**")
-    st.write("---")
-    st.write("📊 **ส่วนสำหรับผู้ดูแลระบบ**")
-    
-    # ตรวจสอบว่ามีไฟล์ประวัติถูกสร้างขึ้นมาหรือยัง
-    if os.path.exists("chat_logs.csv"):
-        with open("chat_logs.csv", "rb") as f:
-            st.download_button(
-                label="📥 ดาวน์โหลดประวัติการแชท (CSV)",
-                data=f,
-                file_name="chat_logs.csv",
-                mime="text/csv"
-            )
-    else:
-        st.info("ยังไม่มีประวัติการแชทในระบบ")
+# =========================================================
+# 📌 ส่วนควบคุมการมองเห็น (จำกัดสิทธิ์เฉพาะผู้ดูแลระบบ / Admin)
+# =========================================================
+# สมมติว่าต้องการให้ ID ที่ชื่อ 'boss' หรือ 'admin' เท่านั้นที่มองเห็นปุ่มโหลดประวัติ
+ADMIN_USERS = ["boss", "admin"] 
+
+if st.session_state["current_user"] in ADMIN_USERS:
+    with st.sidebar:
+        st.success(f"👑 สิทธิ์ผู้ดูแลระบบ: **{st.session_state['current_user']}**")
+        st.write("---")
+        st.write("📊 **แผงควบคุมระบบ (Admin Panel)**")
+        
+        if os.path.exists("chat_logs.csv"):
+            with open("chat_logs.csv", "rb") as f:
+                st.download_button(
+                    label="📥 ดาวน์โหลดประวัติการแชท (CSV)",
+                    data=f,
+                    file_name=f"chat_logs_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
+        else:
+            st.info("ยังไม่มีประวัติการแชทจากพนักงาน")
+else:
+    # ถ้าไม่ใช่ผู้ดูแลระบบ แถบด้านซ้ายจะถูกซ่อนหายไปโดยสิ้นเชิง (พนักงานทั่วไปจะไม่เห็นอะไรเลย)
+    st.set_option('client.showSidebarNavigation', False)
+# =========================================================
 
 # --- หน้าแชทหลัก ---
 st.title("🤖 ผู้ช่วย AI สำหรับองค์กร")
+st.caption(f"👤 บัญชีผู้ใช้: {st.session_state['current_user']}")
 
 @st.cache_resource(show_spinner="กำลังเตรียมความพร้อม AI...")
 def setup_knowledge_base():
@@ -141,6 +147,7 @@ rag_chain = (
     | StrOutputParser()
 )
 
+# ประวัติการแชทที่จะแสดงผลบนหน้าจอพนักงาน (พนักงานจะเห็นเฉพาะของตัวเองในรอบนั้นๆ)
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -159,5 +166,5 @@ if user_input := st.chat_input("พิมพ์คำถามเกี่ยว
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
             
-            # 📌 สั่งให้จดประวัติลงไฟล์ทันทีที่ AI ตอบเสร็จ!
+            # บันทึกประวัติลงไฟล์หลังบ้านแบบเงียบๆ
             log_chat(st.session_state["current_user"], user_input, response)
