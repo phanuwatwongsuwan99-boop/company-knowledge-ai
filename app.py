@@ -61,17 +61,17 @@ st.markdown(
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap');
 
         :root {{
-            --bg: #0E0F12;
-            --bg-soft: #14151A;
-            --surface: #17181C;
-            --surface-2: #1D1E24;
-            --surface-hover: #24252C;
-            --border: #2A2B30;
+            --bg: #110A0B;
+            --bg-soft: #170D0E;
+            --surface: #1B0F10;
+            --surface-2: #221314;
+            --surface-hover: #2A1719;
+            --border: #3A1C1E;
             --text: #F2F1ED;
-            --text-dim: #9A9A9F;
-            --text-faint: #6B6B70;
-            --accent-yellow: #FFD748;
-            --accent-orange: #FF9A3C;
+            --text-dim: #A89A9A;
+            --text-faint: #786A6A;
+            --accent-yellow: #FB3424;
+            --accent-orange: #D21B2A;
             --accent-green: #1FBE6B;
             --radius-lg: 20px;
             --radius-md: 14px;
@@ -157,15 +157,15 @@ st.markdown(
         /* Primary buttons (New chat) get the brand gradient */
         .stButton > button[kind="primary"] {{
             background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange));
-            color: #1A1300;
+            color: #FFFFFF;
             border: none;
             font-weight: 600;
-            box-shadow: 0 4px 16px rgba(255, 154, 60, 0.2);
+            box-shadow: 0 4px 16px rgba(216, 30, 40, 0.35);
         }}
         .stButton > button[kind="primary"]:hover {{
-            color: #1A1300;
+            color: #FFFFFF;
             filter: brightness(1.08);
-            box-shadow: 0 6px 22px rgba(255, 154, 60, 0.35);
+            box-shadow: 0 6px 22px rgba(216, 30, 40, 0.5);
         }}
 
         /* ---------- TEXT INPUTS ---------- */
@@ -261,7 +261,7 @@ st.markdown(
         }}
         [data-testid="stChatInputSubmitButton"] svg,
         [data-testid="stChatInput"] button svg {{
-            fill: #1A1300 !important;
+            fill: #FFFFFF !important;
         }}
 
         /* ---------- METRICS / DATAFRAME (admin) ---------- */
@@ -295,7 +295,7 @@ st.markdown(
             position: absolute;
             width: 220px;
             height: 220px;
-            background: radial-gradient(circle, rgba(255,154,60,0.35) 0%, rgba(255,154,60,0.0) 70%);
+            background: radial-gradient(circle, rgba(225,36,40,0.4) 0%, rgba(225,36,40,0.0) 70%);
             border-radius: 50%;
             z-index: 0;
             animation: pulse-bloom 3.5s ease-in-out infinite;
@@ -310,7 +310,7 @@ st.markdown(
             width: 112px;
             height: 112px;
             object-fit: contain;
-            filter: drop-shadow(0 8px 24px rgba(255, 154, 60, 0.35));
+            filter: drop-shadow(0 8px 24px rgba(225,36,40,0.4));
         }}
         .login-title {{
             font-family: 'Outfit', sans-serif;
@@ -350,7 +350,7 @@ st.markdown(
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            filter: drop-shadow(0 6px 14px rgba(255, 60, 30, 0.35));
+            filter: drop-shadow(0 6px 14px rgba(225,36,40,0.4));
             animation:
                 tomato-roll-move 2.6s linear infinite,
                 tomato-roll-spin 0.5s steps(5) infinite;
@@ -372,7 +372,7 @@ st.markdown(
         .admin-pill {{
             display: inline-block;
             background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange));
-            color: #1A1300;
+            color: #FFFFFF;
             font-weight: 600;
             font-size: 12px;
             padding: 3px 10px;
@@ -393,7 +393,7 @@ st.markdown(
             height: 64px;
             object-fit: contain;
             margin-bottom: 14px;
-            filter: drop-shadow(0 6px 18px rgba(255, 154, 60, 0.3));
+            filter: drop-shadow(0 6px 18px rgba(225,36,40,0.35));
         }}
         .empty-hero h2 {{
             font-size: 22px;
