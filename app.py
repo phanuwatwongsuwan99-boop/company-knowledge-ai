@@ -456,7 +456,7 @@ def check_password():
             f"""
             <div class="login-wrap">
                 <div class="login-orb-bloom">
-                    <img src="{LOGO_IMG}" alt="Oran AI" />
+                    <img src="{LOGO_IMG}" alt="Tomato AI" />
                 </div>
                 <div class="login-title">Oran AI</div>
                 <div class="login-subtitle">ผู้ช่วย AI สำหรับองค์กรของคุณ</div>
