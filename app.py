@@ -23,35 +23,24 @@ import pandas as pd
 from collections import Counter
 from datetime import datetime, timezone, timedelta
 import uuid
-from assets import (
-    LOGO_B64_RAW,
-    TOMATO_1_B64_RAW,
-    TOMATO_2_B64_RAW,
-    TOMATO_3_B64_RAW,
-    TOMATO_4_B64_RAW,
-    TOMATO_5_B64_RAW,
-    TOMATO_6_B64_RAW,
-)
 
 st.set_page_config(page_title="Oran AI | Corporate Assistant", page_icon="🟠", layout="wide")
 
 # =========================================================
-# 🎨 LOGO + TOMATO ANIMATION ASSETS
-# Background already removed (transparent PNG) and embedded as base64
-# in assets.py, so nothing depends on a separate image file on disk.
+# 🎨 LOGO ASSET — embedded as base64 so it works anywhere
 # =========================================================
-LOGO_IMG = f"data:image/png;base64,{LOGO_B64_RAW}"
-TOMATO_FRAMES = [
-    f"data:image/png;base64,{frame}"
-    for frame in [
-        TOMATO_1_B64_RAW,
-        TOMATO_2_B64_RAW,
-        TOMATO_3_B64_RAW,
-        TOMATO_4_B64_RAW,
-        TOMATO_5_B64_RAW,
-        TOMATO_6_B64_RAW,
-    ]
-]
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "logo.png")
+
+@st.cache_data
+def get_logo_b64():
+    try:
+        with open(LOGO_PATH, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+
+LOGO_B64 = get_logo_b64()
+LOGO_IMG = f"data:image/png;base64,{LOGO_B64}" if LOGO_B64 else ""
 
 # =========================================================
 # 🎨 DESIGN TOKENS + GLOBAL CSS (Dark mode, warm-orange accent)
@@ -329,48 +318,6 @@ st.markdown(
             text-align: center;
         }}
 
-        /* =========================================================
-           TOMATO ROLLING LOADER — shown while logging in, before the
-           chat page is ready. Loops left-to-right indefinitely until
-           this screen is replaced by the real chat page.
-           ========================================================= */
-        .tomato-roll-track {{
-            position: relative;
-            width: 100%;
-            max-width: 360px;
-            height: 90px;
-            margin: 18px auto 4px auto;
-            overflow: hidden;
-        }}
-        .tomato-roll-sprite {{
-            position: absolute;
-            top: 50%;
-            left: -90px;
-            width: 80px;
-            height: 80px;
-            margin-top: -40px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            filter: drop-shadow(0 6px 14px rgba(255, 60, 30, 0.35));
-            animation:
-                tomato-roll-move 2.6s linear infinite,
-                tomato-roll-spin 0.45s steps(6) infinite;
-        }}
-        @keyframes tomato-roll-move {{
-            0%   {{ left: -90px; }}
-            100% {{ left: 100%; }}
-        }}
-        @keyframes tomato-roll-spin {{
-            0%   {{ background-image: url('{TOMATO_FRAMES[0]}'); }}
-            17%  {{ background-image: url('{TOMATO_FRAMES[1]}'); }}
-            34%  {{ background-image: url('{TOMATO_FRAMES[2]}'); }}
-            51%  {{ background-image: url('{TOMATO_FRAMES[3]}'); }}
-            68%  {{ background-image: url('{TOMATO_FRAMES[4]}'); }}
-            85%  {{ background-image: url('{TOMATO_FRAMES[5]}'); }}
-            100% {{ background-image: url('{TOMATO_FRAMES[0]}'); }}
-        }}
-
         /* Admin badge accent */
         .admin-pill {{
             display: inline-block;
@@ -511,7 +458,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# --- แอนิเมชันมะเขือเทศกลิ้ง (ตอนกำลังเข้าสู่ระบบ) ---
+# --- แอนิเมชันไดโนเสาร์ ---
 if st.session_state.get("show_dino", False):
     st.markdown(
         """
@@ -531,9 +478,6 @@ if st.session_state.get("show_dino", False):
                     <img src="{LOGO_IMG}" alt="Oran AI" />
                 </div>
                 <div class="login-title">กำลังเข้าสู่ระบบ</div>
-                <div class="tomato-roll-track">
-                    <div class="tomato-roll-sprite"></div>
-                </div>
             </div>
             """,
             unsafe_allow_html=True
@@ -542,7 +486,7 @@ if st.session_state.get("show_dino", False):
         progress_bar = st.progress(0)
         for percent in range(1, 101):
             dino_text.markdown(
-                f"<p style='text-align:center; color:#9A9A9F;'>กำลังเตรียมข้อมูล... {percent}%</p>",
+                f"<p style='text-align:center; color:#9A9A9F;'>🦖 กำลังเตรียมข้อมูล... {percent}%</p>",
                 unsafe_allow_html=True
             )
             progress_bar.progress(percent)
