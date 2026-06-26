@@ -32,7 +32,7 @@ from assets import (
     TOMATO_5_B64_RAW,
 )
 
-st.set_page_config(page_title="Oran AI | Corporate Assistant", page_icon="🟠", layout="wide")
+st.set_page_config(page_title="Tomato AI | Corporate Assistant", page_icon="🟠", layout="wide")
 
 # =========================================================
 # 🎨 LOGO + TOMATO ANIMATION ASSETS
