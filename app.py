@@ -44,14 +44,43 @@ def secret(key, default=None):
         return default
 
 
-ADMIN_USERS = list(secret("ADMIN_USERS", ["boss", "admin"]))
+def _as_list(value):
+    if not value:
+        return []
+    if isinstance(value, str):
+        value = [value]
+    return [str(v).strip().lower() for v in value if str(v).strip()]
+
+
+ADMIN_USERS = _as_list(secret("ADMIN_USERS", ["boss", "admin"]))
+ALLOWED_DOMAINS = [d.lstrip("@") for d in _as_list(secret("ALLOWED_DOMAINS"))]
+ALLOWED_EMAILS = _as_list(secret("ALLOWED_EMAILS"))
 
 
 # =========================================================
-# 🔐 LOGIN
+# 🔐 LOGIN  (Google sign-in + optional username/password)
 # =========================================================
+def google_enabled():
+    auth = secret("auth") or {}
+    return bool(auth.get("client_id")) and bool(auth.get("client_secret"))
+
+
+def password_enabled():
+    return bool(secret("passwords"))
+
+
+def email_allowed(email):
+    email = (email or "").lower()
+    if not email:
+        return False
+    if email in ALLOWED_EMAILS or email in ADMIN_USERS:
+        return True
+    return email.split("@")[-1] in ALLOWED_DOMAINS
+
+
 def logout():
     st.session_state.clear()
+    st.session_state["do_logout"] = True
 
 
 def new_chat():
@@ -73,34 +102,82 @@ def login_attempt():
     st.session_state.pop("password_input", None)
     if ok:
         st.session_state["current_user"] = user
+        st.session_state["display_name"] = user
         st.session_state["show_loader"] = True
 
 
-def render_login():
+def login_header(subtitle="ผู้ช่วย AI สำหรับองค์กรของคุณ"):
     st.markdown(HIDE_SIDEBAR, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="login-wrap">
+            <div class="login-orb-bloom"><img src="{LOGO_IMG}" alt="Oran AI" /></div>
+            <div class="login-title">Oran AI</div>
+            <div class="login-subtitle">{subtitle}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_login():
     _, col, _ = st.columns([1, 1.3, 1])
     with col:
-        st.markdown(
-            f"""
-            <div class="login-wrap">
-                <div class="login-orb-bloom"><img src="{LOGO_IMG}" alt="Oran AI" /></div>
-                <div class="login-title">Oran AI</div>
-                <div class="login-subtitle">ผู้ช่วย AI สำหรับองค์กรของคุณ</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        login_header()
+        if not google_enabled() and not password_enabled():
+            st.error("ยังไม่ได้ตั้งค่าการเข้าสู่ระบบใน Secrets — ดูวิธีใน README")
+            return
+        if google_enabled():
+            if st.button("Sign in with Google", type="primary", width="stretch", icon=":material/login:"):
+                st.login()
+            st.caption("ใช้บัญชี Google / Gmail ของบริษัทในการเข้าสู่ระบบ")
+        if password_enabled():
+            failed = st.session_state.get("password_correct") is False
+            box = st.expander("เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน", expanded=failed or not google_enabled()) if google_enabled() else st.container()
+            with box:
+                if failed:
+                    st.error("ชื่อผู้ใช้งาน หรือ รหัสผ่าน ไม่ถูกต้อง! กรุณาลองใหม่")
+                with st.form("login", border=False):
+                    st.text_input("ชื่อผู้ใช้งาน", key="username_input", placeholder="Username")
+                    st.text_input("รหัสผ่าน", type="password", key="password_input", placeholder="Password")
+                    st.form_submit_button(
+                        "เข้าสู่ระบบ", on_click=login_attempt, width="stretch",
+                        type="secondary" if google_enabled() else "primary",
+                    )
+
+
+def render_denied(email):
+    _, col, _ = st.columns([1, 1.3, 1])
+    with col:
+        login_header("ไม่มีสิทธิ์เข้าใช้งาน")
+        if not ALLOWED_DOMAINS and not ALLOWED_EMAILS:
+            st.error("ผู้ดูแลระบบยังไม่ได้กำหนดว่าอีเมลใดเข้าใช้งานได้ (ALLOWED_DOMAINS / ALLOWED_EMAILS)")
+        else:
+            st.error(f"บัญชี {html.escape(email or '-')} ไม่ได้รับอนุญาตให้เข้าใช้งาน กรุณาใช้อีเมลบริษัท หรือติดต่อผู้ดูแลระบบ")
+        if st.button("ออกจากระบบ / เปลี่ยนบัญชี", width="stretch"):
+            st.session_state.clear()
+            st.logout()
+
+
+# Logout requested from a button callback
+if st.session_state.pop("do_logout", False):
+    if google_enabled() and st.user.get("is_logged_in", False):
+        st.logout()
+
+if google_enabled() and st.user.get("is_logged_in", False):
+    email = str(st.user.get("email") or "").lower()
+    if not email_allowed(email) or st.user.get("email_verified") is False:
+        render_denied(email)
+        st.stop()
+    if st.session_state.get("current_user") != email:
+        st.session_state.clear()
+        st.session_state.update(
+            password_correct=True,
+            current_user=email,
+            display_name=str(st.user.get("name") or email),
+            show_loader=True,
         )
-        if not secret("passwords"):
-            st.error("ยังไม่ได้ตั้งค่าบัญชีผู้ใช้ใน Secrets (หัวข้อ [passwords]) — ดูวิธีใน README")
-        elif st.session_state.get("password_correct") is False:
-            st.error("ชื่อผู้ใช้งาน หรือ รหัสผ่าน ไม่ถูกต้อง! กรุณาลองใหม่")
-        with st.form("login", border=False):
-            st.text_input("ชื่อผู้ใช้งาน", key="username_input", placeholder="Username")
-            st.text_input("รหัสผ่าน", type="password", key="password_input", placeholder="Password")
-            st.form_submit_button("เข้าสู่ระบบ", on_click=login_attempt, width="stretch", type="primary")
-
-
-if not st.session_state.get("password_correct"):
+elif not st.session_state.get("password_correct"):
     render_login()
     st.stop()
 
@@ -127,6 +204,8 @@ if st.session_state.get("show_loader"):
     st.rerun()
 
 USER = st.session_state["current_user"]
+DISPLAY_NAME = st.session_state.get("display_name", USER)
+IS_ADMIN = USER.lower() in ADMIN_USERS
 
 
 def brand_header():
@@ -165,7 +244,7 @@ def top_keywords(texts, top_n=5):
 def admin_page():
     with st.sidebar:
         brand_header()
-        st.markdown(f"<span class='admin-pill'>ผู้ดูแลระบบ · {html.escape(USER)}</span>", unsafe_allow_html=True)
+        st.markdown(f"<span class='admin-pill'>ผู้ดูแลระบบ · {html.escape(DISPLAY_NAME)}</span>", unsafe_allow_html=True)
         st.write("---")
         st.button("🚪 ออกจากระบบ", on_click=logout, width="stretch")
 
@@ -241,7 +320,7 @@ def admin_page():
             st.rerun()
 
 
-if USER in ADMIN_USERS:
+if IS_ADMIN:
     admin_page()
     st.stop()
 
@@ -270,7 +349,7 @@ my_logs = all_logs[all_logs["ชื่อพนักงาน"] == USER]
 
 with st.sidebar:
     brand_header()
-    st.caption(f"👤 {USER}")
+    st.caption(f"👤 {DISPLAY_NAME}")
     st.button("➕ New chat", on_click=new_chat, width="stretch", type="primary")
     st.write("---")
     st.write("**History**")
