@@ -7,7 +7,6 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 import storage
 from assets import (
@@ -98,7 +97,7 @@ def render_login():
         with st.form("login", border=False):
             st.text_input("ชื่อผู้ใช้งาน", key="username_input", placeholder="Username")
             st.text_input("รหัสผ่าน", type="password", key="password_input", placeholder="Password")
-            st.form_submit_button("เข้าสู่ระบบ", on_click=login_attempt, use_container_width=True, type="primary")
+            st.form_submit_button("เข้าสู่ระบบ", on_click=login_attempt, width="stretch", type="primary")
 
 
 if not st.session_state.get("password_correct"):
@@ -168,7 +167,7 @@ def admin_page():
         brand_header()
         st.markdown(f"<span class='admin-pill'>ผู้ดูแลระบบ · {html.escape(USER)}</span>", unsafe_allow_html=True)
         st.write("---")
-        st.button("🚪 ออกจากระบบ", on_click=logout, use_container_width=True)
+        st.button("🚪 ออกจากระบบ", on_click=logout, width="stretch")
 
     st.title("📊 Admin Dashboard")
 
@@ -208,7 +207,7 @@ def admin_page():
             else:
                 st.dataframe(
                     unanswered_df[["วัน-เวลา", "ชื่อพนักงาน", "คำถาม"]].iloc[::-1],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
 
@@ -225,7 +224,7 @@ def admin_page():
             users = ["ทั้งหมด"] + sorted(df["ชื่อพนักงาน"].unique().tolist())
             pick = st.selectbox("กรองตามพนักงาน", users)
             view = df if pick == "ทั้งหมด" else df[df["ชื่อพนักงาน"] == pick]
-            st.dataframe(view.iloc[::-1], use_container_width=True, hide_index=True)
+            st.dataframe(view.iloc[::-1], width="stretch", hide_index=True)
 
     with tab_docs:
         st.caption(
@@ -234,7 +233,7 @@ def admin_page():
         )
         _, report = build_index(docs_fingerprint())
         if report:
-            st.dataframe(pd.DataFrame(report), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(report), width="stretch", hide_index=True)
         else:
             st.error("ไม่พบเอกสารในโฟลเดอร์ docs/")
         if st.button("🔄 สร้างฐานความรู้ใหม่"):
@@ -272,7 +271,7 @@ my_logs = all_logs[all_logs["ชื่อพนักงาน"] == USER]
 with st.sidebar:
     brand_header()
     st.caption(f"👤 {USER}")
-    st.button("➕ New chat", on_click=new_chat, use_container_width=True, type="primary")
+    st.button("➕ New chat", on_click=new_chat, width="stretch", type="primary")
     st.write("---")
     st.write("**History**")
     if my_logs.empty:
@@ -282,9 +281,9 @@ with st.sidebar:
             first_q = str(group.iloc[0]["คำถาม"])
             short = first_q[:25] + "..." if len(first_q) > 25 else first_q
             icon = "📍" if chat_id == st.session_state.get("current_chat_id") else "💬"
-            st.button(f"{icon} {short}", key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), use_container_width=True)
+            st.button(f"{icon} {short}", key=f"btn_{chat_id}", on_click=switch_chat, args=(chat_id,), width="stretch")
     st.write("---")
-    st.button("🚪 Logout", on_click=logout, use_container_width=True)
+    st.button("🚪 Logout", on_click=logout, width="stretch")
 
 st.session_state.setdefault("current_chat_id", uuid.uuid4().hex[:8])
 if not st.session_state.get("messages"):
@@ -355,11 +354,11 @@ if user_input := st.chat_input("พิมพ์คำถามเกี่ยว
 # =========================================================
 # 🛠️ JS FIX: vertically centre the chat input contents
 # =========================================================
-components.html(
+st.html(
     """
     <script>
     function centerChatInputVertically() {
-        const doc = window.parent.document;
+        const doc = document;
         doc.querySelectorAll('[data-testid="stChatInput"] textarea').forEach(function(ta) {
             let node = ta.parentElement;
             for (let i = 0; i < 5 && node; i++) {
@@ -383,8 +382,8 @@ components.html(
         if (throttled) return;
         throttled = true;
         setTimeout(function() { centerChatInputVertically(); throttled = false; }, 200);
-    }).observe(window.parent.document.body, {childList: true, subtree: true});
+    }).observe(document.body, {childList: true, subtree: true});
     </script>
     """,
-    height=1,
+    unsafe_allow_javascript=True,
 )
