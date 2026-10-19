@@ -1,0 +1,11 @@
+# Secrets — never commit
+.streamlit/secrets.toml
+*.json
+
+# Local chat logs
+chat_logs.csv
+
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
